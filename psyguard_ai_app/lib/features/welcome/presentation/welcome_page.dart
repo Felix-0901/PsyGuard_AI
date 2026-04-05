@@ -27,7 +27,7 @@ class WelcomePage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Icon(
-                  Icons.psychology_rounded,
+                  Icons.spa_rounded,
                   color: PsyGuardTheme.primary,
                   size: 48,
                 ),
