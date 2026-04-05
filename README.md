@@ -1,76 +1,76 @@
 # PsyGuard AI
 
-PsyGuard AI is an AI-driven mental health support and companionship tool designed to provide users with a secure and empathetic platform. Built with Flutter, this MVP application leverages artificial intelligence to offer guided assistance, track emotional trends, and act as a reliable daily companion for mental wellness.
+PsyGuard AI 是一款由人工智慧驅動的心理健康支援與陪伴工具，旨在為使用者提供一個安全且具同理心的平台。此 MVP 應用程式使用 Flutter 打造，運用人工智慧提供引導式協助、追蹤情緒趨勢，並作為日常心理健康的可靠夥伴。
 
-## Key Features
+## 核心功能
 
-- **AI Companionship:** Engage with a conversational AI designed to provide emotional support and guidance.
-- **Voice Interaction:** Supports natural communication through Speech-to-Text and Text-to-Speech capabilities.
-- **Trend Tracking:** Visualize emotional well-being over time with interactive charts.
-- **Secure Local Storage:** Ensures user data privacy by utilizing securely encrypted local content and databases.
-- **Fluid Navigation:** Seamless user experience with a robust routing architecture.
+- **AI 陪伴：** 與對話式 AI 互動，獲得情感支持與引導。
+- **語音互動：** 透過語音轉文字 (Speech-to-Text) 與文字轉語音 (Text-to-Speech) 功能，支援自然的溝通體驗。
+- **趨勢追蹤：** 利用互動式圖表，讓隨時間變化的情緒狀態視覺化。
+- **安全的本機儲存：** 採用加密的本機內容與資料庫，確保使用者資料隱私。
+- **流暢的導覽：** 透過穩健的路由架構，帶來無縫的使用者體驗。
 
-## Tech Stack
+## 技術堆疊
 
-The application is built using the Flutter framework and incorporates the following core libraries:
+本應用程式採用 Flutter 框架建置，並結合以下核心套件：
 
-- **Framework:** Flutter (Dart)
-- **State Management:** Riverpod (flutter_riverpod)
-- **Routing:** Go Router (go_router)
-- **Local Database:** Drift (drift) and SQLite
-- **Networking:** Dio (dio)
-- **Data Visualization:** FL Chart (fl_chart)
-- **Voice APIs:** speech_to_text and flutter_tts
-- **Markdown Rendering:** flutter_markdown
+- **框架：** Flutter (Dart)
+- **狀態管理：** Riverpod (flutter_riverpod)
+- **路由管理：** Go Router (go_router)
+- **本機資料庫：** Drift (drift) 與 SQLite
+- **網路請求：** Dio (dio)
+- **資料視覺化：** FL Chart (fl_chart)
+- **語音 API：** speech_to_text 與 flutter_tts
+- **Markdown 渲染：** flutter_markdown
 
-## Project Structure
+## 專案結構
 
-The repository contains the main application under the `psyguard_ai_app` directory. Key operations should be executed within this directory.
+此儲存庫將主要的應用程式放置於 `psyguard_ai_app` 目錄下。關鍵的開發操作皆應在此目錄內執行。
 
-## Getting Started
+## 開始使用
 
-Follow these steps to set up the project locally.
+請依照以下步驟在本地端進行專案環境設定。
 
-### Prerequisites
+### 系統需求
 
-- Flutter SDK (compatible with version ^3.9.2 constraints)
-- Xcode (for iOS development and testing)
-- Android Studio (for Android development and testing)
-- CocoaPods (for iOS dependencies)
+- Flutter SDK (需兼容 ^3.9.2 版本限制)
+- Xcode (用於 iOS 開發與測試)
+- Android Studio (用於 Android 開發與測試)
+- CocoaPods (用於 iOS 套件相依性管理)
 
-### Installation
+### 安裝步驟
 
-1. Navigate to the application directory:
+1. 進入應用程式目錄：
    ```bash
    cd psyguard_ai_app
    ```
 
-2. Install Dart dependencies:
+2. 安裝 Dart 依賴套件：
    ```bash
    flutter pub get
    ```
 
-3. Configure Environment Variables:
-   - Create a `.env` file in the `psyguard_ai_app` directory.
-   - Use the existing `.env.example` as a template for required keys (e.g., API tokens).
+3. 設定環境變數：
+   - 在 `psyguard_ai_app` 目錄中建立一個 `.env` 檔案。
+   - 參考現有的 `.env.example` 檔案作為範本，填入必要的金鑰（例如 API Token）。
 
-4. Generate Generated Code (Drift Database, etc.):
+4. 產生程式碼 (如 Drift 資料庫自動生成程式碼等)：
    ```bash
    dart run build_runner build -d
    ```
 
-5. Install iOS Dependencies (If running on iOS):
+5. 安裝 iOS 依賴套件 (如果要在 iOS 環境下執行)：
    ```bash
    cd ios
    pod install
    cd ..
    ```
 
-6. Run the application:
+6. 執行應用程式：
    ```bash
    flutter run
    ```
 
-## License
+## 授權條款
 
-This project is licensed under the terms provided in the LICENSE file.
+本專案依照 LICENSE 檔案中提供的授權條款進行授權。
