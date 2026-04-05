@@ -85,6 +85,7 @@ class TrendsPage extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
+                        key: ValueKey('range_$days'),
                         label: Text(days == 90 ? '3 個月' : '$days 天'),
                         selected: range == days,
                         onSelected: (selected) {
@@ -108,7 +109,7 @@ class TrendsPage extends ConsumerWidget {
                           side: BorderSide(
                             color: range == days
                                 ? Colors.transparent
-                                : Colors.black.withOpacity(0.1),
+                                : Colors.black.withValues(alpha: 0.1),
                           ),
                         ),
                         padding: const EdgeInsets.symmetric(
@@ -127,6 +128,73 @@ class TrendsPage extends ConsumerWidget {
             child: data.when(
               data: (bundle) {
                 try {
+                  if (bundle.checkins.isEmpty &&
+                      bundle.sleepLogs.isEmpty &&
+                      bundle.risks.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFFE5E7EB),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.timeline_rounded,
+                                size: 48,
+                                color: PsyGuardTheme.primary.withValues(
+                                  alpha: 0.55,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              '還沒有趨勢資料',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: PsyGuardTheme.textPrimary,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '先完成一次「筆記紀錄」或「睡眠紀錄」，就能開始看到你的 7/14/30 天變化。',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: PsyGuardTheme.textSecondary,
+                                height: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 18),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () => context.push('/checkin'),
+                                    child: const Text('去做覺察'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () => context.push('/sleep'),
+                                    child: const Text('記錄睡眠'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
                   return ListView(
                     physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
