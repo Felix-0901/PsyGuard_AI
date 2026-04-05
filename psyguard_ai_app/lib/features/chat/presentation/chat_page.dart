@@ -139,6 +139,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _textController.clear();
       _scrollToBottom();
 
+      final immediateRisk = await riskService.evaluateAndPersistToday(
+        sessionId: sessionId,
+      );
+      if (immediateRisk.riskLevel == RiskLevel.high) {
+        const safetyFirst =
+            '我聽見你現在非常痛、也很危險。你不需要一個人撐著。\n\n'
+            '請你先做 3 次慢呼吸：吸氣 4 秒、停 2 秒、吐氣 6 秒。\n'
+            '如果你有立即危險，請立刻撥打 110 或 119；也可以撥打 1925 安心專線。\n\n'
+            '我可以帶你進入安全流程，幫你把求助訊息整理好。';
+        await db.insertChatMessage(
+          sessionId: sessionId,
+          role: 'ai',
+          content: safetyFirst,
+        );
+        _scrollToBottom();
+        if (mounted) {
+          await _showHighRiskSheet();
+        }
+        return;
+      }
+
       final latestRisk = await db.getLatestRiskSnapshot();
       String? contextSummary;
       if (latestRisk != null) {
@@ -161,12 +182,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       );
       _scrollToBottom();
 
-      final risk = await riskService.evaluateAndPersistToday(
-        sessionId: sessionId,
-      );
-
+      final risk = await riskService.evaluateAndPersistToday(sessionId: sessionId);
       if (risk.riskLevel == RiskLevel.high && mounted) {
-        context.go('/safety');
+        await _showHighRiskSheet();
       }
     } catch (error) {
       if (mounted) {
@@ -177,6 +195,95 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
+  }
+
+  Future<void> _showHighRiskSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: PsyGuardTheme.error,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '偵測到高風險訊號',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: PsyGuardTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '如果你有立即危險，請立刻撥打 110 / 119。你也可以先進入安全流程，取得求助資源與一鍵複製訊息。',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.6,
+                    color: PsyGuardTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      this.context.go('/safety');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: PsyGuardTheme.error,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('前往安全流程'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: PsyGuardTheme.textPrimary,
+                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('我想再聊一下'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override

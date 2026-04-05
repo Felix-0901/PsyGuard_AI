@@ -32,10 +32,11 @@ abstract class AiChatRepository {
 }
 
 final aiApiClientProvider = Provider<AiApiClient>((ref) {
-  return OpenAiCompatibleClient(
-    ref.read(dioProvider),
-    ref.read(appConfigProvider),
-  );
+  final config = ref.watch(appConfigProvider);
+  if (!config.isConfigured) {
+    return MockAiClient();
+  }
+  return OpenAiCompatibleClient(ref.read(dioProvider), config);
 });
 
 final aiChatRepositoryProvider = Provider<AiChatRepository>((ref) {

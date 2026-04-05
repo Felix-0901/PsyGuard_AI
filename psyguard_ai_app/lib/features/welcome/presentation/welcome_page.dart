@@ -103,7 +103,7 @@ class WelcomePage extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () => context.go('/home'),
+                  onPressed: () => context.go('/consent'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: PsyGuardTheme.primary,
                     foregroundColor: Colors.white,

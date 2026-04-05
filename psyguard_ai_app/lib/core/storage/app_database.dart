@@ -123,6 +123,21 @@ class AppDatabase extends _$AppDatabase {
   DateTime normalizeDay(DateTime date) =>
       DateTime(date.year, date.month, date.day);
 
+  Future<void> clearAllData() async {
+    await transaction(() async {
+      await batch((b) {
+        b.deleteAll(chatMessages);
+        b.deleteAll(chatSessions);
+        b.deleteAll(dailyCheckins);
+        b.deleteAll(sleepLogs);
+        b.deleteAll(riskSnapshots);
+        b.deleteAll(toolUsages);
+        b.deleteAll(auditLogs);
+        b.deleteAll(aiReports);
+      });
+    });
+  }
+
   Future<void> saveAiReport({
     required int rangeDays,
     required String content,

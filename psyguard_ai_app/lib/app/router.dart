@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/security/local_settings_service.dart';
 import '../features/chat/presentation/chat_page.dart';
 import '../features/checkin/presentation/checkin_history_page.dart';
 import '../features/checkin/presentation/checkin_page.dart';
 import '../features/export/presentation/export_page.dart';
 import '../features/home/presentation/home_page.dart';
+import '../features/settings/presentation/settings_page.dart';
 import '../features/safety/presentation/safety_page.dart';
 import '../features/sleep/presentation/sleep_history_page.dart';
 import '../features/sleep/presentation/sleep_page.dart';
@@ -16,15 +18,34 @@ import '../features/trends/presentation/ai_report_page.dart';
 import '../features/trends/presentation/ai_report_history_page.dart';
 import '../features/tools_library/presentation/tool_history_page.dart';
 import '../features/welcome/presentation/welcome_page.dart';
+import '../features/welcome/presentation/consent_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/welcome',
+    redirect: (context, state) async {
+      final hasConsent = await ref.read(consentAcceptedProvider.future);
+      final location = state.uri.toString();
+      final isWelcome = location == '/welcome';
+      final isConsent = location == '/consent';
+      if (hasConsent && isWelcome) {
+        return '/home';
+      }
+      if (!hasConsent && !isWelcome && !isConsent) {
+        return '/consent';
+      }
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/welcome',
         name: 'welcome',
         builder: (context, state) => const WelcomePage(),
+      ),
+      GoRoute(
+        path: '/consent',
+        name: 'consent',
+        builder: (context, state) => const ConsentPage(),
       ),
       GoRoute(
         path: '/home',
@@ -113,6 +134,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'export',
         pageBuilder: (context, state) =>
             _buildPageWithSlide(context, state, const ExportPage()),
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        pageBuilder: (context, state) =>
+            _buildPageWithSlide(context, state, const SettingsPage()),
       ),
     ],
   );
