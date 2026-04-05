@@ -60,12 +60,8 @@ class TrendsPage extends ConsumerWidget {
             onPressed: () => context.push('/ai_history'),
           ),
           IconButton(
-            icon: const Icon(Icons.psychology_alt_rounded),
+            icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF6B4C9A)),
             tooltip: 'AI 趨勢分析',
-            style: IconButton.styleFrom(
-              backgroundColor: const Color(0xFF6B4C9A),
-              foregroundColor: Colors.white,
-            ),
             onPressed: () => _showAiAnalysisDialog(context, ref),
           ),
           const SizedBox(width: 8),
