@@ -1,9 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../config/app_config.dart';
-
-final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.fromEnv());
+import 'app_config_controller.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final config = ref.watch(appConfigProvider);

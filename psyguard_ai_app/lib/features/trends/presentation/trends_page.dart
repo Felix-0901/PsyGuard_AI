@@ -206,7 +206,7 @@ class TrendsPage extends ConsumerWidget {
                               .toList(),
                         ),
                         minY: 0,
-                        maxY: 5,
+                        maxY: 4,
                       ),
                       const SizedBox(height: 16),
                       _chartCard(

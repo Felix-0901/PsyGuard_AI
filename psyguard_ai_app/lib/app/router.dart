@@ -28,10 +28,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final location = state.uri.toString();
       final isWelcome = location == '/welcome';
       final isConsent = location == '/consent';
+      final isSafety = location == '/safety';
       if (hasConsent && isWelcome) {
         return '/home';
       }
-      if (!hasConsent && !isWelcome && !isConsent) {
+      if (!hasConsent && !isWelcome && !isConsent && !isSafety) {
         return '/consent';
       }
       return null;

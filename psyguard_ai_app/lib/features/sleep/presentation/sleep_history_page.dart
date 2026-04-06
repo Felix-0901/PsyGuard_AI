@@ -153,15 +153,17 @@ class SleepHistoryPage extends ConsumerWidget {
   }
 
   Widget _buildQualityBadge(int difficulty) {
-    // difficulty: 1 (Very Easy) to 5 (Very Hard)
-    // Map to Quality: Low Difficulty = High Quality
+    // difficulty: 0 (沒有困難) to 3 (嚴重)
     String label;
     Color color;
 
-    if (difficulty <= 2) {
+    if (difficulty <= 0) {
       label = '品質優良';
       color = PsyGuardTheme.success;
-    } else if (difficulty == 3) {
+    } else if (difficulty <= 1) {
+      label = '品質良好';
+      color = PsyGuardTheme.success;
+    } else if (difficulty == 2) {
       label = '品質普通';
       color = PsyGuardTheme.textSecondary;
     } else {

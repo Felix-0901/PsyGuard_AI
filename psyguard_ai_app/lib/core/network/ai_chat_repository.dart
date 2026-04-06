@@ -7,6 +7,7 @@ import '../config/app_config.dart';
 import '../storage/app_database.dart';
 import '../storage/database_provider.dart';
 import 'ai_api_client.dart';
+import 'app_config_controller.dart';
 import 'dio_provider.dart';
 
 class AiReply {
@@ -41,9 +42,9 @@ final aiApiClientProvider = Provider<AiApiClient>((ref) {
 
 final aiChatRepositoryProvider = Provider<AiChatRepository>((ref) {
   return AiChatRepositoryImpl(
-    client: ref.read(aiApiClientProvider),
-    db: ref.read(appDatabaseProvider),
-    config: ref.read(appConfigProvider),
+    client: ref.watch(aiApiClientProvider),
+    db: ref.watch(appDatabaseProvider),
+    config: ref.watch(appConfigProvider),
   );
 });
 

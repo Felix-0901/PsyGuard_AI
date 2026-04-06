@@ -31,12 +31,12 @@ class MockDataSeeder {
       // 2.1 Mood (Complex trend)
       // Use multiple sine waves to create realistic "seasons" of mood
       final trend = sin(i / 20) * 0.8 + sin(i / 7) * 0.3;
-      // Base mood 3.5, clamped to 1-5
-      int mood = (3.5 + trend + (_rng.nextDouble() - 0.5)).round().clamp(1, 5);
+      // Base mood 2, clamped to 0-4 (matching slider range)
+      int mood = (2 + trend + (_rng.nextDouble() - 0.5)).round().clamp(0, 4);
 
-      // Correlate stress/energy
-      int stress = (7 - mood + _rng.nextInt(3) - 1).clamp(1, 10);
-      int energy = (mood * 1.5 + _rng.nextInt(4)).toInt().clamp(1, 10);
+      // Correlate stress/energy (0-4 range matching CheckinPage sliders)
+      int stress = (4 - mood + _rng.nextInt(2) - 1).clamp(0, 4);
+      int energy = (mood + _rng.nextInt(2)).clamp(0, 4);
 
       await db.upsertDailyCheckin(
         date: date,
@@ -53,10 +53,10 @@ class MockDataSeeder {
         double sleepBase = mood < 3 ? 5.5 : 7.0;
         double sleep = (sleepBase + _rng.nextDouble() * 2.5).clamp(3.0, 10.0);
         sleepVal = sleep;
-        int difficulty = mood < 3
-            ? (3 + _rng.nextInt(3))
-            : (1 + _rng.nextInt(3));
-        difficulty = difficulty.clamp(1, 5);
+        int difficulty = mood <= 1
+            ? (2 + _rng.nextInt(2))
+            : _rng.nextInt(3);
+        difficulty = difficulty.clamp(0, 3);
 
         final bedtime = DateTime(
           date.year,
@@ -78,13 +78,13 @@ class MockDataSeeder {
 
       // 2.3 Risk Snapshot (Simulated)
       String riskLevel = 'low';
-      if (mood <= 2 && stress >= 8) riskLevel = 'medium';
-      if (mood == 1 && stress >= 9 && (sleepVal ?? 7.0) < 5) riskLevel = 'high';
+      if (mood <= 1 && stress >= 3) riskLevel = 'medium';
+      if (mood == 0 && stress >= 4 && (sleepVal ?? 7.0) < 5) riskLevel = 'high';
 
       await db.upsertRiskSnapshot(
         date: date,
         riskLevel: riskLevel,
-        riskScore: stress * 10,
+        riskScore: (stress * 20 + (4 - mood) * 5).clamp(0, 100),
         reasons: _getRiskReasons(riskLevel),
       );
 

@@ -134,9 +134,9 @@ class CheckinHistoryPage extends ConsumerWidget {
 
   Widget _buildScoreBadge(String label, int score) {
     Color color;
-    if (score >= 80) {
+    if (score >= 4) {
       color = PsyGuardTheme.success;
-    } else if (score >= 50) {
+    } else if (score >= 3) {
       color = PsyGuardTheme.textSecondary;
     } else {
       color = PsyGuardTheme.error;

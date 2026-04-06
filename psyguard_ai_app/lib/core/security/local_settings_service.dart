@@ -14,10 +14,41 @@ class LocalSettingsService {
 
   final FlutterSecureStorage _storage;
 
+  static const _aiBaseUrlKey = 'ai_base_url';
+  static const _aiApiKeyKey = 'ai_api_key';
+  static const _aiModelKey = 'ai_model';
   static const _lastExportPathKey = 'last_export_path';
   static const _consentAcceptedKey = 'consent_accepted';
   static const _consentAcceptedAtKey = 'consent_accepted_at';
   static const _consentVersionKey = 'consent_version';
+
+  Future<void> saveAiSettings({
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+  }) async {
+    await _storage.write(key: _aiBaseUrlKey, value: baseUrl);
+    await _storage.write(key: _aiApiKeyKey, value: apiKey);
+    await _storage.write(key: _aiModelKey, value: model);
+  }
+
+  Future<StoredAiSettings?> getAiSettings() async {
+    final baseUrl = (await _storage.read(key: _aiBaseUrlKey))?.trim() ?? '';
+    final apiKey = (await _storage.read(key: _aiApiKeyKey))?.trim() ?? '';
+    final model = (await _storage.read(key: _aiModelKey))?.trim() ?? '';
+
+    if (baseUrl.isEmpty && apiKey.isEmpty && model.isEmpty) {
+      return null;
+    }
+
+    return StoredAiSettings(baseUrl: baseUrl, apiKey: apiKey, model: model);
+  }
+
+  Future<void> clearAiSettings() async {
+    await _storage.delete(key: _aiBaseUrlKey);
+    await _storage.delete(key: _aiApiKeyKey);
+    await _storage.delete(key: _aiModelKey);
+  }
 
   Future<void> setLastExportPath(String path) {
     return _storage.write(key: _lastExportPathKey, value: path);
@@ -44,4 +75,18 @@ class LocalSettingsService {
   Future<void> clearAll() {
     return _storage.deleteAll();
   }
+}
+
+class StoredAiSettings {
+  const StoredAiSettings({
+    required this.baseUrl,
+    required this.apiKey,
+    required this.model,
+  });
+
+  final String baseUrl;
+  final String apiKey;
+  final String model;
+
+  bool get isConfigured => baseUrl.isNotEmpty && apiKey.isNotEmpty;
 }

@@ -6,17 +6,35 @@ class AppConfig {
     required this.apiKey,
     required this.model,
     required this.appEnv,
+    this.isUserProvided = false,
   });
 
   final String baseUrl;
   final String apiKey;
   final String model;
   final String appEnv;
+  final bool isUserProvided;
 
   bool get isConfigured =>
       baseUrl.isNotEmpty &&
       apiKey.isNotEmpty &&
       !apiKey.contains('REPLACE_WITH');
+
+  AppConfig copyWith({
+    String? baseUrl,
+    String? apiKey,
+    String? model,
+    String? appEnv,
+    bool? isUserProvided,
+  }) {
+    return AppConfig(
+      baseUrl: baseUrl ?? this.baseUrl,
+      apiKey: apiKey ?? this.apiKey,
+      model: model ?? this.model,
+      appEnv: appEnv ?? this.appEnv,
+      isUserProvided: isUserProvided ?? this.isUserProvided,
+    );
+  }
 
   factory AppConfig.fromEnv() {
     String value(String key, {String fallback = ''}) {
@@ -39,6 +57,7 @@ class AppConfig {
       apiKey: value('API_KEY'),
       model: value('AI_MODEL', fallback: 'gpt-4o-mini'),
       appEnv: value('APP_ENV', fallback: 'dev'),
+      isUserProvided: false,
     );
   }
 }

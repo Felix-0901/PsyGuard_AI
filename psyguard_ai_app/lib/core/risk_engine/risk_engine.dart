@@ -53,7 +53,7 @@ class RiskEngine {
       final avgMood =
           input.moodScoresLast14d.reduce((a, b) => a + b) /
           input.moodScoresLast14d.length;
-      if (avgMood <= 2) {
+      if (avgMood <= 1) {
         score += 30;
         reasons.add('近 14 天心情平均偏低');
       }
