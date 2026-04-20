@@ -8,9 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/storage/database_provider.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../core/widgets/app_brand_icon.dart';
-import '../../../core/widgets/breathing_ring.dart';
 import '../../../core/widgets/micro_shake.dart';
-import '../../../core/widgets/geometric_stress_indicator.dart';
 import '../../../core/widgets/tooltip_bubble.dart';
 import '../../../core/widgets/brand_loading_indicator.dart';
 
@@ -267,6 +265,11 @@ class _HomeContentState extends State<_HomeContent> {
   int get _riskScore => widget.data.latestRisk?.riskScore ?? 20;
   String get _riskLevel => widget.data.latestRisk?.riskLevel ?? 'low';
   bool get _isHighRisk => _riskScore >= 70;
+  IconData get _statusIcon => switch (_riskLevel) {
+    'high' => Icons.sentiment_very_dissatisfied_rounded,
+    'medium' => Icons.sentiment_neutral_rounded,
+    _ => Icons.sentiment_very_satisfied_rounded,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -313,26 +316,23 @@ class _HomeContentState extends State<_HomeContent> {
         ),
         const SizedBox(height: 32),
 
-        // ── Status Card with Breathing Ring & Geometric Indicator ────
+        // ── Status Card ──────────────────────────────────────────────
         Container(
           padding: const EdgeInsets.all(24),
           decoration: PsyGuardTheme.softCard,
           child: Row(
             children: [
-              BreathingRing(
-                riskLevel: _riskLevel,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: riskColor.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.shield_rounded,
-                    color: riskColor,
-                    size: 28,
-                  ),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: riskColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _statusIcon,
+                  color: riskColor,
+                  size: 30,
                 ),
               ),
               const SizedBox(width: 16),
@@ -351,10 +351,6 @@ class _HomeContentState extends State<_HomeContent> {
                     Text('今日身心狀態', style: theme.textTheme.bodyMedium),
                   ],
                 ),
-              ),
-              GeometricStressIndicator(
-                riskScore: _riskScore,
-                size: 36,
               ),
             ],
           ),
