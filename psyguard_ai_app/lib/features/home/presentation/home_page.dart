@@ -68,7 +68,7 @@ const _tooltipData = <String, Map<String, String>>{
   },
   '睡眠紀錄': {
     'title': '睡眠紀錄',
-    'desc': '追蹤每晚的睡眠時長與品質，幫助你建立健康的作息節奏。',
+    'desc': '看見每晚的睡眠變化，慢慢找回適合自己的作息節奏。',
   },
   '匯出報告': {
     'title': '匯出報告',
