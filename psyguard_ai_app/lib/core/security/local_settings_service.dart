@@ -2,6 +2,15 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const defaultTtsSpeechRate = 0.55;
+const minTtsSpeechRate = 0.35;
+const maxTtsSpeechRate = 1.0;
+
+double normalizeTtsSpeechRate(double value) {
+  final clamped = value.clamp(minTtsSpeechRate, maxTtsSpeechRate);
+  return double.parse(clamped.toStringAsFixed(2));
+}
+
 final localSettingsServiceProvider = Provider<LocalSettingsService>((ref) {
   return LocalSettingsService(const FlutterSecureStorage());
 });
@@ -12,6 +21,10 @@ final consentAcceptedProvider = FutureProvider<bool>((ref) async {
 
 final welcomeSeenProvider = FutureProvider<bool>((ref) async {
   return ref.read(localSettingsServiceProvider).getWelcomeSeen();
+});
+
+final ttsSpeechRateProvider = FutureProvider<double>((ref) async {
+  return ref.read(localSettingsServiceProvider).getTtsSpeechRate();
 });
 
 class LocalSettingsService {
@@ -27,6 +40,7 @@ class LocalSettingsService {
   static const _consentAcceptedAtKey = 'consent_accepted_at';
   static const _consentVersionKey = 'consent_version';
   static const _welcomeSeenKey = 'welcome_seen';
+  static const _ttsSpeechRateKey = 'tts_speech_rate';
 
   Future<void> saveAiSettings({
     required String baseUrl,
@@ -88,10 +102,22 @@ class LocalSettingsService {
     return prefs.getBool(_welcomeSeenKey) ?? false;
   }
 
+  Future<void> setTtsSpeechRate(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_ttsSpeechRateKey, normalizeTtsSpeechRate(value));
+  }
+
+  Future<double> getTtsSpeechRate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getDouble(_ttsSpeechRateKey);
+    return normalizeTtsSpeechRate(value ?? defaultTtsSpeechRate);
+  }
+
   Future<void> clearAll() async {
     await _storage.deleteAll();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_welcomeSeenKey);
+    await prefs.remove(_ttsSpeechRateKey);
   }
 }
 

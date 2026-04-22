@@ -12,6 +12,7 @@ import '../../../core/network/ai_chat_repository.dart';
 import '../../../core/network/ai_local_messages.dart';
 import '../../../core/risk_engine/risk_models.dart';
 import '../../../core/risk_engine/risk_provider.dart';
+import '../../../core/security/local_settings_service.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../core/storage/database_provider.dart';
 
@@ -68,9 +69,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     try {
+      final speechRate = await ref.read(ttsSpeechRateProvider.future);
       await _tts.awaitSpeakCompletion(true);
       await _tts.setLanguage('zh-TW');
-      await _tts.setSpeechRate(0.8);
+      await _tts.setSpeechRate(speechRate);
       await _tts.setPitch(1.0);
       _tts.setStartHandler(() {
         if (!mounted) return;
@@ -101,6 +103,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     _voiceInitialized = true;
+  }
+
+  Future<void> _applyTtsSpeechRate(double value) async {
+    if (!_voiceInitialized) return;
+
+    try {
+      await _tts.setSpeechRate(value);
+    } catch (e) {
+      debugPrint('[ChatPage] Failed to update TTS speech rate: $e');
+    }
   }
 
   @override
@@ -411,6 +423,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Widget build(BuildContext context) {
     final messages = ref.watch(chatMessagesProvider);
     final theme = Theme.of(context);
+
+    ref.listen<AsyncValue<double>>(ttsSpeechRateProvider, (previous, next) {
+      next.whenData(_applyTtsSpeechRate);
+    });
 
     ref.listen(chatMessagesProvider, (prev, next) {
       if (next.hasValue) {

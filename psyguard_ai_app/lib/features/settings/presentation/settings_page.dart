@@ -29,6 +29,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _didSeedFields = false;
   bool _hasManualChanges = false;
   bool _isSaving = false;
+  double _ttsSpeechRate = defaultTtsSpeechRate;
+  bool _didLoadTtsSpeechRate = false;
+  bool _hasPendingTtsSpeechRateChanges = false;
+  bool _isSavingTtsSpeechRate = false;
 
   @override
   void initState() {
@@ -36,6 +40,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _baseUrlController.addListener(_markEdited);
     _apiKeyController.addListener(_markEdited);
     _modelController.addListener(_markEdited);
+    _loadTtsSpeechRate();
   }
 
   @override
@@ -214,6 +219,112 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 18),
+            _sectionTitle('語音設定'),
+            const SizedBox(height: 12),
+            _card(
+              child: _didLoadTtsSpeechRate
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '調整 AI 回覆朗讀速度。儲存後，聊天頁的語音播放會立即套用新的語速。',
+                          style: GoogleFonts.nunitoSans(
+                            fontSize: 13,
+                            height: 1.6,
+                            color: PsyGuardTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Text(
+                              '目前語速',
+                              style: GoogleFonts.nunitoSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: PsyGuardTheme.textPrimary,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${_describeTtsSpeechRate(_ttsSpeechRate)} (${_ttsSpeechRate.toStringAsFixed(2)})',
+                              style: GoogleFonts.nunitoSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: PsyGuardTheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Slider(
+                          value: _ttsSpeechRate,
+                          min: minTtsSpeechRate,
+                          max: maxTtsSpeechRate,
+                          divisions:
+                              ((maxTtsSpeechRate - minTtsSpeechRate) / 0.05)
+                                  .round(),
+                          label: _ttsSpeechRate.toStringAsFixed(2),
+                          activeColor: PsyGuardTheme.primary,
+                          inactiveColor: PsyGuardTheme.primary.withValues(
+                            alpha: 0.18,
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              _ttsSpeechRate = normalizeTtsSpeechRate(value);
+                              _hasPendingTtsSpeechRateChanges = true;
+                            });
+                          },
+                        ),
+                        Row(
+                          children: [
+                            Text(
+                              '較慢',
+                              style: GoogleFonts.nunitoSans(
+                                fontSize: 12,
+                                color: PsyGuardTheme.textSecondary,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '較快',
+                              style: GoogleFonts.nunitoSans(
+                                fontSize: 12,
+                                color: PsyGuardTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed:
+                                _isSavingTtsSpeechRate ||
+                                    !_hasPendingTtsSpeechRateChanges
+                                ? null
+                                : _saveTtsSpeechRate,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: PsyGuardTheme.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              textStyle: GoogleFonts.nunitoSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            child: Text(
+                              _isSavingTtsSpeechRate ? '儲存中...' : '儲存語音設定',
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : const Center(child: CircularProgressIndicator()),
             ),
             const SizedBox(height: 18),
             _sectionTitle('資料與隱私'),
@@ -460,6 +571,43 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
+  Future<void> _loadTtsSpeechRate() async {
+    final speechRate = await ref
+        .read(localSettingsServiceProvider)
+        .getTtsSpeechRate();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _ttsSpeechRate = speechRate;
+      _didLoadTtsSpeechRate = true;
+      _hasPendingTtsSpeechRateChanges = false;
+    });
+  }
+
+  Future<void> _saveTtsSpeechRate() async {
+    setState(() => _isSavingTtsSpeechRate = true);
+    try {
+      final normalizedValue = normalizeTtsSpeechRate(_ttsSpeechRate);
+      await ref
+          .read(localSettingsServiceProvider)
+          .setTtsSpeechRate(normalizedValue);
+      ref.invalidate(ttsSpeechRateProvider);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _ttsSpeechRate = normalizedValue;
+        _hasPendingTtsSpeechRateChanges = false;
+      });
+      _showMessage('語音播放速度已更新');
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingTtsSpeechRate = false);
+      }
+    }
+  }
+
   void _seedFields(AppConfig config) {
     _baseUrlController.text = _defaultBaseUrlFor(config);
     _apiKeyController.text = config.isUserProvided ? config.apiKey : '';
@@ -472,6 +620,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     if (_didSeedFields && !_isSaving) {
       _hasManualChanges = true;
     }
+  }
+
+  String _describeTtsSpeechRate(double value) {
+    if (value <= 0.45) {
+      return '較慢';
+    }
+    if (value >= 0.8) {
+      return '較快';
+    }
+    return '標準';
   }
 
   String _defaultBaseUrlFor(AppConfig config) {
