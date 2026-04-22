@@ -10,17 +10,17 @@
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.002465">
+      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.002332">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: cd .. &amp;&amp; flutter build ipa" time="82.769742">
+      <testcase classname="fastlane.lanes" name="2: cd .. &amp;&amp; flutter build ipa" time="77.609533">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="3: upload_to_testflight" time="214.608736">
+      <testcase classname="fastlane.lanes" name="3: upload_to_testflight" time="269.860396">
         
       </testcase>
     
