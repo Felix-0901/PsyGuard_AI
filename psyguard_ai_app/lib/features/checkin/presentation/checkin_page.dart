@@ -38,19 +38,29 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
     setState(() => _saving = true);
 
     try {
+      final now = DateTime.now();
+      final mood = _mood.round();
+      final stress = _stress.round();
+      final energy = _energy.round();
+
       await ref
           .read(appDatabaseProvider)
           .upsertDailyCheckin(
-            date: DateTime.now(),
-            mood: _mood.round(),
-            stress: _stress.round(),
-            energy: _energy.round(),
+            date: now,
+            mood: mood,
+            stress: stress,
+            energy: energy,
             note: _noteController.text.isNotEmpty ? _noteController.text : null,
           );
 
       final risk = await ref
           .read(riskEvaluationServiceProvider)
-          .evaluateAndPersistToday();
+          .evaluateAndPersistCheckin(
+            date: now,
+            mood: mood,
+            stress: stress,
+            energy: energy,
+          );
 
       if (!mounted) return;
       setState(() => _saving = false);

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/risk_engine/risk_models.dart';
+import '../../../core/risk_engine/risk_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/storage/database_provider.dart';
 import '../../../core/storage/app_database.dart';
@@ -16,29 +18,40 @@ class HomeDashboard {
   HomeDashboard({
     required this.todayCheckin,
     required this.todaySleep,
+    required this.todayCheckinRisk,
     required this.latestRisk,
     required this.recentNotes,
   });
 
   final DailyCheckin? todayCheckin;
   final SleepLog? todaySleep;
+  final RiskSnapshotResult? todayCheckinRisk;
   final RiskSnapshot? latestRisk;
   final List<String> recentNotes;
 }
 
 final homeDashboardProvider = FutureProvider<HomeDashboard>((ref) async {
   final db = ref.read(appDatabaseProvider);
+  final riskEngine = ref.read(riskEngineProvider);
   final since = DateTime.now().subtract(const Duration(days: 3));
   final messages = await db.getMessagesSince(since);
   final checkins = await db.getCheckinsSince(since);
+  final todayCheckin = await db.getTodayCheckin();
   final notes = <String>[
     ...messages.map((m) => m.content),
     ...checkins.where((c) => c.note != null).map((c) => c.note!),
   ];
 
   return HomeDashboard(
-    todayCheckin: await db.getTodayCheckin(),
+    todayCheckin: todayCheckin,
     todaySleep: await db.getTodaySleepLog(),
+    todayCheckinRisk: todayCheckin == null
+        ? null
+        : riskEngine.evaluateCheckin(
+            moodScore: todayCheckin.moodScore,
+            stressScore: todayCheckin.stressScore,
+            energyScore: todayCheckin.energyScore,
+          ),
     latestRisk: await db.getLatestRiskSnapshot(),
     recentNotes: notes,
   );
@@ -46,38 +59,14 @@ final homeDashboardProvider = FutureProvider<HomeDashboard>((ref) async {
 
 // ── Long-press tooltip content ──────────────────────────────────────
 const _tooltipData = <String, Map<String, String>>{
-  'AI 陪伴': {
-    'title': 'AI 陪伴',
-    'desc': '有些時候，你只需要被聽見，我會一直在，安靜陪著你。',
-  },
-  '筆記紀錄': {
-    'title': '筆記紀錄',
-    'desc': '把心裡的感受寫下來，讓自己慢慢看見、慢慢理解。',
-  },
-  '身心趨勢': {
-    'title': '身心趨勢',
-    'desc': '用溫柔的方式，看見你的變化，一步步找回自己的節奏。',
-  },
-  '心理工具箱': {
-    'title': '心理工具箱',
-    'desc': '當你開始感到不安，我會陪你慢慢穩下來。',
-  },
-  '行政救援': {
-    'title': '行政救援（案號）',
-    'desc': '緊急時刻，為你媒合校園與市府實體資源。',
-  },
-  '睡眠紀錄': {
-    'title': '睡眠紀錄',
-    'desc': '看見每晚的睡眠變化，慢慢找回適合自己的作息節奏。',
-  },
-  '匯出報告': {
-    'title': '匯出報告',
-    'desc': '把你的狀態整理成一份安心，需要時也能分享給專業的人。',
-  },
-  '安全流程': {
-    'title': '安全流程',
-    'desc': '提供即時的求助資源和安全步驟，在緊急時刻保護你的安全。',
-  },
+  'AI 陪伴': {'title': 'AI 陪伴', 'desc': '有些時候，你只需要被聽見，我會一直在，安靜陪著你。'},
+  '筆記紀錄': {'title': '筆記紀錄', 'desc': '把心裡的感受寫下來，讓自己慢慢看見、慢慢理解。'},
+  '身心趨勢': {'title': '身心趨勢', 'desc': '用溫柔的方式，看見你的變化，一步步找回自己的節奏。'},
+  '心理工具箱': {'title': '心理工具箱', 'desc': '當你開始感到不安，我會陪你慢慢穩下來。'},
+  '行政救援': {'title': '行政救援（案號）', 'desc': '緊急時刻，為你媒合校園與市府實體資源。'},
+  '睡眠紀錄': {'title': '睡眠紀錄', 'desc': '看見每晚的睡眠變化，慢慢找回適合自己的作息節奏。'},
+  '匯出報告': {'title': '匯出報告', 'desc': '把你的狀態整理成一份安心，需要時也能分享給專業的人。'},
+  '安全流程': {'title': '安全流程', 'desc': '提供即時的求助資源和安全步驟，在緊急時刻保護你的安全。'},
 };
 
 class HomePage extends ConsumerWidget {
@@ -126,14 +115,10 @@ class HomePage extends ConsumerWidget {
           ),
         ),
         body: dashboard.when(
-          data: (data) => _HomeContent(
-            data: data,
-            greeting: greeting,
-            theme: theme,
-          ),
-          loading: () => const Center(
-            child: BrandLoadingIndicator(message: '載入中...'),
-          ),
+          data: (data) =>
+              _HomeContent(data: data, greeting: greeting, theme: theme),
+          loading: () =>
+              const Center(child: BrandLoadingIndicator(message: '載入中...')),
           error: (error, stack) => Center(child: Text('載入失敗: $error')),
         ),
         drawer: _buildDrawer(context),
@@ -262,8 +247,14 @@ class _HomeContentState extends State<_HomeContent> {
     return PsyGuardTheme.negativeKeywords.any((kw) => notes.contains(kw));
   }
 
-  int get _riskScore => widget.data.latestRisk?.riskScore ?? 20;
-  String get _riskLevel => widget.data.latestRisk?.riskLevel ?? 'low';
+  int get _riskScore =>
+      widget.data.todayCheckinRisk?.riskScore ??
+      widget.data.latestRisk?.riskScore ??
+      20;
+  String get _riskLevel =>
+      widget.data.todayCheckinRisk?.riskLevelKey ??
+      widget.data.latestRisk?.riskLevel ??
+      'low';
   bool get _isHighRisk => _riskScore >= 70;
   IconData get _statusIcon => switch (_riskLevel) {
     'high' => Icons.sentiment_very_dissatisfied_rounded,
@@ -284,16 +275,64 @@ class _HomeContentState extends State<_HomeContent> {
     // Priority reorder: when high risk, move safety & tools to front
     final exploreCards = _isHighRisk
         ? [
-            _cardData('行政救援', '案號 115-E018647', Icons.health_and_safety_rounded, const Color(0xFFD14343), '/safety'),
-            _cardData('心理工具箱', '心情急救', Icons.style_rounded, const Color(0xFF6B4C9A), '/tools'),
-            _cardData('筆記紀錄', '情緒抒發', Icons.edit_note_rounded, const Color(0xFFD4A373), '/checkin'),
-            _cardData('身心趨勢', '健康數據趨勢', Icons.favorite_rounded, const Color(0xFFE5989B), '/trends'),
+            _cardData(
+              '行政救援',
+              '案號 115-E018647',
+              Icons.health_and_safety_rounded,
+              const Color(0xFFD14343),
+              '/safety',
+            ),
+            _cardData(
+              '心理工具箱',
+              '心情急救',
+              Icons.style_rounded,
+              const Color(0xFF6B4C9A),
+              '/tools',
+            ),
+            _cardData(
+              '筆記紀錄',
+              '情緒抒發',
+              Icons.edit_note_rounded,
+              const Color(0xFFD4A373),
+              '/checkin',
+            ),
+            _cardData(
+              '身心趨勢',
+              '健康數據趨勢',
+              Icons.favorite_rounded,
+              const Color(0xFFE5989B),
+              '/trends',
+            ),
           ]
         : [
-            _cardData('筆記紀錄', '情緒抒發', Icons.edit_note_rounded, const Color(0xFFD4A373), '/checkin'),
-            _cardData('身心趨勢', '健康數據趨勢', Icons.favorite_rounded, const Color(0xFFE5989B), '/trends'),
-            _cardData('AI 陪伴', '舒心對話', Icons.chat_bubble_outline_rounded, const Color(0xFF5B8C85), '/chat'),
-            _cardData('睡眠紀錄', '記錄睡眠狀況', Icons.bedtime_outlined, const Color(0xFF6D8299), '/sleep'),
+            _cardData(
+              '筆記紀錄',
+              '情緒抒發',
+              Icons.edit_note_rounded,
+              const Color(0xFFD4A373),
+              '/checkin',
+            ),
+            _cardData(
+              '身心趨勢',
+              '健康數據趨勢',
+              Icons.favorite_rounded,
+              const Color(0xFFE5989B),
+              '/trends',
+            ),
+            _cardData(
+              'AI 陪伴',
+              '舒心對話',
+              Icons.chat_bubble_outline_rounded,
+              const Color(0xFF5B8C85),
+              '/chat',
+            ),
+            _cardData(
+              '睡眠紀錄',
+              '記錄睡眠狀況',
+              Icons.bedtime_outlined,
+              const Color(0xFF6D8299),
+              '/sleep',
+            ),
           ];
 
     return ListView(
@@ -329,11 +368,7 @@ class _HomeContentState extends State<_HomeContent> {
                   color: riskColor.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  _statusIcon,
-                  color: riskColor,
-                  size: 30,
-                ),
+                child: Icon(_statusIcon, color: riskColor, size: 30),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -368,9 +403,11 @@ class _HomeContentState extends State<_HomeContent> {
           crossAxisSpacing: 14,
           childAspectRatio: 1.55,
           children: exploreCards.map((card) {
-            final isBoldTarget = _hasNegativeSignal &&
+            final isBoldTarget =
+                _hasNegativeSignal &&
                 (card['title'] == 'AI 陪伴' || card['title'] == '心理工具箱');
-            final isShakeTarget = _isHighRisk &&
+            final isShakeTarget =
+                _isHighRisk &&
                 (card['title'] == '行政救援' || card['title'] == '安全流程');
 
             return MicroShake(
@@ -520,9 +557,7 @@ class _InteractiveCardState extends State<_InteractiveCard>
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: widget.color.withValues(alpha: 0.12),
-            ),
+            border: Border.all(color: widget.color.withValues(alpha: 0.12)),
             boxShadow: [
               BoxShadow(
                 color: widget.color.withValues(alpha: 0.06),

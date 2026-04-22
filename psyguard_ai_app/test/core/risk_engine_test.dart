@@ -6,6 +6,39 @@ void main() {
   group('RiskEngine', () {
     final engine = RiskEngine();
 
+    test('returns LOW for stable check-in scores', () {
+      final result = engine.evaluateCheckin(
+        moodScore: 82,
+        stressScore: 28,
+        energyScore: 78,
+      );
+
+      expect(result.riskLevel, RiskLevel.low);
+      expect(result.riskScore, lessThan(40));
+    });
+
+    test('returns MEDIUM for mixed check-in pressure', () {
+      final result = engine.evaluateCheckin(
+        moodScore: 42,
+        stressScore: 63,
+        energyScore: 38,
+      );
+
+      expect(result.riskLevel, RiskLevel.medium);
+      expect(result.riskScore, inInclusiveRange(40, 69));
+    });
+
+    test('returns HIGH for severe check-in strain', () {
+      final result = engine.evaluateCheckin(
+        moodScore: 20,
+        stressScore: 85,
+        energyScore: 18,
+      );
+
+      expect(result.riskLevel, RiskLevel.high);
+      expect(result.riskScore, greaterThanOrEqualTo(70));
+    });
+
     test('returns HIGH when high-risk keywords appear', () {
       final result = engine.evaluateDay(
         messages: const ['我真的想死，活不下去了'],

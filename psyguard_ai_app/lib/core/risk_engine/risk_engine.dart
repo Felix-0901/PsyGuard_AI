@@ -28,6 +28,76 @@ class RiskEngine {
     '我需要幫助',
   ];
 
+  RiskSnapshotResult evaluateCheckin({
+    required int moodScore,
+    required int stressScore,
+    required int energyScore,
+  }) {
+    final mood = moodScore.clamp(0, 100);
+    final stress = stressScore.clamp(0, 100);
+    final energy = energyScore.clamp(0, 100);
+    final reasons = <String>[];
+    var score = 0;
+
+    if (mood <= 25) {
+      score += 35;
+      reasons.add('當下心情明顯偏低');
+    } else if (mood <= 45) {
+      score += 20;
+      reasons.add('當下心情偏低');
+    } else if (mood <= 60) {
+      score += 10;
+      reasons.add('當下心情略低');
+    }
+
+    if (stress >= 75) {
+      score += 35;
+      reasons.add('當下壓力明顯偏高');
+    } else if (stress >= 60) {
+      score += 20;
+      reasons.add('當下壓力偏高');
+    } else if (stress >= 45) {
+      score += 10;
+      reasons.add('當下壓力略高');
+    }
+
+    if (energy <= 25) {
+      score += 20;
+      reasons.add('當下活力明顯偏低');
+    } else if (energy <= 40) {
+      score += 10;
+      reasons.add('當下活力偏低');
+    }
+
+    if (mood <= 35 && stress >= 75) {
+      score += 10;
+      reasons.add('心情低落且壓力偏高');
+    }
+
+    if (mood <= 35 && energy <= 30) {
+      score += 10;
+      reasons.add('心情低落且活力偏低');
+    }
+
+    score = score.clamp(0, 100);
+
+    final level = score >= 70
+        ? RiskLevel.high
+        : score >= 40
+        ? RiskLevel.medium
+        : RiskLevel.low;
+
+    if (reasons.isEmpty) {
+      reasons.add('當下狀態穩定');
+    }
+
+    return RiskSnapshotResult(
+      riskLevel: level,
+      riskScore: score,
+      reasons: reasons,
+    );
+  }
+
   RiskSnapshotResult evaluateDay({
     required List<String> messages,
     required dynamic checkin,

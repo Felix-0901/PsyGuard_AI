@@ -20,6 +20,40 @@ class RiskEvaluationService {
   final AppDatabase _db;
   final RiskEngine _engine;
 
+  Future<RiskSnapshotResult> evaluateAndPersistCheckin({
+    required DateTime date,
+    required int mood,
+    required int stress,
+    required int energy,
+  }) async {
+    final result = _engine.evaluateCheckin(
+      moodScore: mood,
+      stressScore: stress,
+      energyScore: energy,
+    );
+
+    await _db.upsertRiskSnapshot(
+      date: date,
+      riskLevel: result.riskLevelKey,
+      riskScore: result.riskScore,
+      reasons: result.reasons,
+    );
+
+    if (result.riskLevel == RiskLevel.high) {
+      await _db.logAudit(
+        eventType: 'high_risk_triggered',
+        meta: {
+          'timestamp': date.toIso8601String(),
+          'riskScore': result.riskScore,
+          'reasons': result.reasons,
+          'source': 'checkin',
+        },
+      );
+    }
+
+    return result;
+  }
+
   Future<RiskSnapshotResult> evaluateAndPersistToday({
     String? sessionId,
   }) async {
