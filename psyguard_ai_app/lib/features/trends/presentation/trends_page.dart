@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/ai_chat_repository.dart';
+import '../../../core/security/local_settings_service.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../core/storage/database_provider.dart';
 import '../../../core/widgets/geometric_stress_indicator.dart';
 import '../../../core/widgets/brand_loading_indicator.dart';
+import '../../../l10n/app_strings.dart';
 
 class TrendBundle {
   TrendBundle({
@@ -46,11 +48,12 @@ class TrendsPage extends ConsumerWidget {
     final range = ref.watch(trendRangeProvider);
     final data = ref.watch(trendBundleProvider);
     final theme = Theme.of(context);
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
 
     return Scaffold(
       backgroundColor: PsyGuardTheme.background,
       appBar: AppBar(
-        title: const Text('身心趨勢'),
+        title: Text(copy.trendsTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.go('/home'),
@@ -58,7 +61,7 @@ class TrendsPage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.history_rounded),
-            tooltip: '分析歷史',
+            tooltip: copy.analysisHistory,
             onPressed: () => context.push('/ai_history'),
           ),
           IconButton(
@@ -66,7 +69,7 @@ class TrendsPage extends ConsumerWidget {
               Icons.auto_awesome_rounded,
               color: Color(0xFF6B4C9A),
             ),
-            tooltip: 'AI 趨勢分析',
+            tooltip: copy.aiTrendAnalysis,
             onPressed: () => _showAiAnalysisDialog(context, ref),
           ),
           const SizedBox(width: 8),
@@ -87,7 +90,9 @@ class TrendsPage extends ConsumerWidget {
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
                         key: ValueKey('range_$days'),
-                        label: Text(days == 90 ? '3 個月' : '$days 天'),
+                        label: Text(
+                          days == 90 ? copy.threeMonths : copy.days(days),
+                        ),
                         selected: range == days,
                         onSelected: (selected) {
                           if (selected) {
@@ -133,7 +138,9 @@ class TrendsPage extends ConsumerWidget {
                   final latestRiskScore = bundle.risks.isNotEmpty
                       ? bundle.risks.last.riskScore
                       : 20;
-                  final riskIconColor = PsyGuardTheme.riskColor(latestRiskScore);
+                  final riskIconColor = PsyGuardTheme.riskColor(
+                    latestRiskScore,
+                  );
 
                   if (bundle.checkins.isEmpty &&
                       bundle.sleepLogs.isEmpty &&
@@ -163,7 +170,7 @@ class TrendsPage extends ConsumerWidget {
                             ),
                             const SizedBox(height: 18),
                             Text(
-                              '還沒有趨勢資料',
+                              copy.noTrendData,
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: PsyGuardTheme.textPrimary,
@@ -172,7 +179,7 @@ class TrendsPage extends ConsumerWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '先完成一次「筆記紀錄」或「睡眠紀錄」，就能開始看到你的 7/14/30 天變化。',
+                              copy.noTrendDataBody,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: PsyGuardTheme.textSecondary,
                                 height: 1.5,
@@ -185,14 +192,14 @@ class TrendsPage extends ConsumerWidget {
                                 Expanded(
                                   child: OutlinedButton(
                                     onPressed: () => context.push('/checkin'),
-                                    child: const Text('去做覺察'),
+                                    child: Text(copy.doCheckin),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: ElevatedButton(
                                     onPressed: () => context.push('/sleep'),
-                                    child: const Text('記錄睡眠'),
+                                    child: Text(copy.recordSleep),
                                   ),
                                 ),
                               ],
@@ -211,7 +218,7 @@ class TrendsPage extends ConsumerWidget {
                             child: Transform.rotate(
                               angle: -0.3,
                               child: Text(
-                                '案號 115-E018647',
+                                copy.emergencyCase,
                                 style: TextStyle(
                                   fontSize: 36,
                                   fontWeight: FontWeight.w900,
@@ -229,7 +236,7 @@ class TrendsPage extends ConsumerWidget {
                         children: [
                           _chartCard(
                             context,
-                            title: '心情百分比',
+                            title: copy.moodPercentage,
                             icon: Icons.sentiment_satisfied_alt_rounded,
                             color: const Color(0xFF667EEA),
                             spots: _toSpots(
@@ -244,11 +251,13 @@ class TrendsPage extends ConsumerWidget {
                           const SizedBox(height: 16),
                           _chartCard(
                             context,
-                            title: '睡眠時長',
+                            title: copy.sleepHoursLabel,
                             icon: Icons.bedtime_rounded,
                             color: const Color(0xFFA18CD1),
                             spots: _toSpots(
-                              bundle.sleepLogs.map((e) => e.sleepHours).toList(),
+                              bundle.sleepLogs
+                                  .map((e) => e.sleepHours)
+                                  .toList(),
                             ),
                             minY: 0,
                             maxY: 12,
@@ -257,7 +266,7 @@ class TrendsPage extends ConsumerWidget {
                           // 風險分數卡 + 幾何壓力指示器
                           _chartCard(
                             context,
-                            title: '風險分數',
+                            title: copy.riskScore,
                             icon: Icons.shield_rounded,
                             color: riskIconColor,
                             spots: _toSpots(
@@ -279,17 +288,20 @@ class TrendsPage extends ConsumerWidget {
                 } catch (e) {
                   return Center(
                     child: Text(
-                      '圖表載入錯誤：請稍後再試\n$e',
+                      copy.chartLoadError(e),
                       style: theme.textTheme.bodyMedium,
                     ),
                   );
                 }
               },
-              loading: () => const Center(
-                child: BrandLoadingIndicator(message: '載入趨勢資料...'),
+              loading: () => Center(
+                child: BrandLoadingIndicator(message: copy.loadingTrendData),
               ),
               error: (error, stack) => Center(
-                child: Text('載入失敗：$error', style: theme.textTheme.bodyMedium),
+                child: Text(
+                  copy.loadFailed(error),
+                  style: theme.textTheme.bodyMedium,
+                ),
               ),
             ),
           ),
@@ -427,27 +439,31 @@ class TrendsPage extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
+    final copy = AppStrings.of(ref.read(appLanguageControllerProvider));
     final range = await showDialog<int>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('選擇 AI 分析範圍'),
+        title: Text(copy.chooseAiRange),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, 30),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-            child: const Text('近 1 個月', style: TextStyle(fontSize: 16)),
+            child: Text(copy.lastMonth, style: const TextStyle(fontSize: 16)),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, 90),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-            child: const Text('近 3 個月', style: TextStyle(fontSize: 16)),
+            child: Text(
+              copy.lastThreeMonths,
+              style: const TextStyle(fontSize: 16),
+            ),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, 365),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-            child: const Text('近 1 年', style: TextStyle(fontSize: 16)),
+            child: Text(copy.lastYear, style: const TextStyle(fontSize: 16)),
           ),
         ],
       ),
@@ -478,25 +494,44 @@ class TrendsPage extends ConsumerWidget {
 
       // 2. Format Data for AI
       final moodSummary = checkins
-          .map((e) => '${e.date.toString().substring(0, 10)}:心情${e.moodScore}%')
+          .map(
+            (e) => copy.isZhTw
+                ? '${e.date.toString().substring(0, 10)}:心情${e.moodScore}%'
+                : '${e.date.toString().substring(0, 10)}: mood ${e.moodScore}%',
+          )
           .join('\n');
       final sleepSummary = sleepLogs
           .map(
-            (e) => '${e.date.toString().substring(0, 10)}:睡眠${e.sleepHours}hr',
+            (e) => copy.isZhTw
+                ? '${e.date.toString().substring(0, 10)}:睡眠${e.sleepHours}hr'
+                : '${e.date.toString().substring(0, 10)}: sleep ${e.sleepHours}hr',
           )
           .join('\n');
       final riskSummary = risks
-          .map((e) => '${e.date.toString().substring(0, 10)}:風險${e.riskScore}')
+          .map(
+            (e) => copy.isZhTw
+                ? '${e.date.toString().substring(0, 10)}:風險${e.riskScore}'
+                : '${e.date.toString().substring(0, 10)}: risk ${e.riskScore}',
+          )
           .join('\n');
 
-      final inputData =
-          '''
+      final inputData = copy.isZhTw
+          ? '''
 時間範圍：近 $range 天
 -- 心情紀錄 --
 $moodSummary
 -- 睡眠紀錄 --
 $sleepSummary
 -- 風險分數 --
+$riskSummary
+'''
+          : '''
+Time range: last $range days
+-- Mood Records --
+$moodSummary
+-- Sleep Records --
+$sleepSummary
+-- Risk Scores --
 $riskSummary
 ''';
 
@@ -517,7 +552,7 @@ $riskSummary
       Navigator.pop(context); // Close loading
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('分析失敗：$e')));
+      ).showSnackBar(SnackBar(content: Text(copy.analysisFailed(e))));
     }
   }
 }

@@ -18,9 +18,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.text('今日筆記'),
+      find.text('Today\'s Note'),
       300,
-      scrollable: find.byType(Scrollable),
+      scrollable: find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -28,10 +31,13 @@ void main() {
     expect(textField, findsOneWidget);
     await tester.enterText(textField, 'a' * 201);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('完成紀錄').first);
+    await tester.tap(find.text('Complete Check-in').first);
     await tester.pump();
 
-    expect(find.text('補充文字請控制在 200 字內'), findsOneWidget);
+    expect(
+      find.text('Please keep the note under 200 characters.'),
+      findsOneWidget,
+    );
     await db.close();
   });
 }

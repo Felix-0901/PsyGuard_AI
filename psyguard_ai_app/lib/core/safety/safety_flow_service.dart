@@ -9,6 +9,10 @@ final safetyFlowServiceProvider = Provider<SafetyFlowService>((ref) {
 
 class SafetyFlowService {
   SafetyPlan getPlan({required RiskLevel riskLevel, required String locale}) {
+    if (locale.toLowerCase().startsWith('en')) {
+      return _englishPlan(riskLevel);
+    }
+
     final steps = switch (riskLevel) {
       RiskLevel.high => const [
         SafetyStep(
@@ -59,12 +63,8 @@ class SafetyFlowService {
     };
 
     final copyTemplate = switch (riskLevel) {
-      RiskLevel.high =>
-        '我現在情緒很不穩，擔心自己會做出危險行為。請你現在陪我，並協助我聯絡輔導老師或 1925。'
-      ,
-      RiskLevel.medium =>
-        '我最近壓力很大、情緒不太穩，想找你聊聊並請你陪我一起想想怎麼做比較安全。'
-      ,
+      RiskLevel.high => '我現在情緒很不穩，擔心自己會做出危險行為。請你現在陪我，並協助我聯絡輔導老師或 1925。',
+      RiskLevel.medium => '我最近壓力很大、情緒不太穩，想找你聊聊並請你陪我一起想想怎麼做比較安全。',
       _ => '我最近心情不太好，想找你聊聊，請你聽我說一下就好。',
     };
 
@@ -92,6 +92,103 @@ class SafetyFlowService {
       ],
       copyTemplate: copyTemplate,
       disclaimer: '本應用非醫療診斷工具，不能取代心理師與醫療專業。若有立即危險請立刻撥打 110/119。',
+    );
+  }
+
+  SafetyPlan _englishPlan(RiskLevel riskLevel) {
+    final steps = switch (riskLevel) {
+      RiskLevel.high => const [
+        SafetyStep(
+          title: 'Step 0 | Get immediate safety first',
+          content:
+              'If you are in immediate danger or near anything you could use to hurt yourself, move away and call local emergency services now.',
+        ),
+        SafetyStep(
+          title: 'Step A | Slow your breathing',
+          content:
+              'Inhale for 4 seconds, hold for 2, and exhale for 6. Repeat 3 times to help your body slow down.',
+        ),
+        SafetyStep(
+          title: 'Step B | Choose one real person',
+          content:
+              'You do not have to hold this alone. Contact a trusted adult, counselor, teacher, or local support line first.',
+        ),
+        SafetyStep(
+          title: 'Step C | Copy a support message',
+          content:
+              'Make your need clear so the other person knows you need company and safety support now.',
+        ),
+      ],
+      RiskLevel.medium => const [
+        SafetyStep(
+          title: 'Step A | Slow your breathing',
+          content:
+              'Inhale for 4 seconds, hold for 2, and exhale for 6. Repeat 3 times to help your body slow down.',
+        ),
+        SafetyStep(
+          title: 'Step B | Tell one safe person',
+          content:
+              'If you can, choose a trusted adult or friend and let them know your stress has been rising.',
+        ),
+        SafetyStep(
+          title: 'Step C | Pick one tiny next action',
+          content:
+              'Make the next step small: drink water, wash your face, move to a brighter place, or hand your phone to someone you trust.',
+        ),
+      ],
+      _ => const [
+        SafetyStep(
+          title: 'Step A | Slow your breathing',
+          content:
+              'Inhale for 4 seconds, hold for 2, and exhale for 6. Repeat 3 times to help your body slow down.',
+        ),
+        SafetyStep(
+          title: 'Step B | Write the feeling down',
+          content:
+              'Use one sentence: "The hardest part right now is..." Then write one small care action you can do.',
+        ),
+        SafetyStep(
+          title: 'Step C | Ask for help when needed',
+          content:
+              'If things feel harder to carry, contact a school counselor, trusted adult, or local support line.',
+        ),
+      ],
+    };
+
+    final copyTemplate = switch (riskLevel) {
+      RiskLevel.high =>
+        'I feel emotionally unsafe and I am worried I may do something dangerous. Please stay with me now and help me contact a counselor or emergency support.',
+      RiskLevel.medium =>
+        'I have been under a lot of stress and feel unstable. Could you talk with me and help me think through a safer next step?',
+      _ =>
+        'I have not been feeling well lately. Could you listen to me for a little while?',
+    };
+
+    return SafetyPlan(
+      riskLevel: riskLevel,
+      steps: steps,
+      resources: const [
+        SafetyResource(
+          name: 'School counseling office',
+          contact: 'Check your school notice',
+          description:
+              'Contact your homeroom teacher, counselor, or student affairs office first.',
+        ),
+        SafetyResource(
+          name: 'Local crisis line',
+          contact: 'Use your local number',
+          description:
+              '24-hour emotional support and referral where available.',
+        ),
+        SafetyResource(
+          name: 'Emergency services',
+          contact: 'Local emergency number',
+          description: 'Call if there is immediate danger.',
+        ),
+      ],
+      copyTemplate: copyTemplate,
+      disclaimer:
+          'This app is not a medical diagnostic tool and does not replace licensed mental health or medical professionals. If you are in immediate danger, call local emergency services now.',
     );
   }
 }

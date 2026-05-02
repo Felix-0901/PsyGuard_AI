@@ -15,6 +15,8 @@ import '../../../core/risk_engine/risk_provider.dart';
 import '../../../core/security/local_settings_service.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../core/storage/database_provider.dart';
+import '../../../l10n/app_language.dart';
+import '../../../l10n/app_strings.dart';
 
 final chatSessionIdProvider = FutureProvider<String>((ref) async {
   final db = ref.read(appDatabaseProvider);
@@ -71,7 +73,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     try {
       final speechRate = await ref.read(ttsSpeechRateProvider.future);
       await _tts.awaitSpeakCompletion(true);
-      await _tts.setLanguage('zh-TW');
+      await _tts.setLanguage(
+        _ttsLanguageFor(ref.read(appLanguageControllerProvider)),
+      );
       await _tts.setSpeechRate(speechRate);
       await _tts.setPitch(1.0);
       _tts.setStartHandler(() {
@@ -154,6 +158,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   Future<void> _speakMessage(ChatMessage msg) async {
     await _ensureVoiceInitialized();
+    await _tts.setLanguage(
+      _ttsLanguageFor(ref.read(appLanguageControllerProvider)),
+    );
 
     if (_activeTtsMessageId != null && _activeTtsMessageId != msg.id) {
       await _tts.stop();
@@ -218,12 +225,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   Future<void> _toggleListening() async {
     await _ensureVoiceInitialized();
+    final language = ref.read(appLanguageControllerProvider);
+    final copy = AppStrings.of(language);
 
     if (!_speechReady) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('語音功能無法使用，請確認權限設定')));
+        ).showSnackBar(SnackBar(content: Text(copy.voiceUnavailable)));
       }
       return;
     }
@@ -235,7 +244,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     await _speech.listen(
-      localeId: 'zh_TW',
+      localeId: _speechLocaleFor(language),
       onResult: (result) {
         setState(() {
           _textController.text = result.recognizedWords;
@@ -258,6 +267,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final db = ref.read(appDatabaseProvider);
     final repository = ref.read(aiChatRepositoryProvider);
     final riskService = ref.read(riskEvaluationServiceProvider);
+    final language = ref.read(appLanguageControllerProvider);
+    final copy = AppStrings.of(language);
 
     try {
       final sessionId = await ref.read(chatSessionIdProvider.future);
@@ -277,7 +288,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         await db.insertChatMessage(
           sessionId: sessionId,
           role: 'ai',
-          content: aiHighRiskSafetyReply,
+          content: aiHighRiskSafetyReplyFor(language),
         );
         _scrollToBottom();
         if (mounted) {
@@ -291,8 +302,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (latestRisk != null) {
         final reasons = (jsonDecode(latestRisk.reasonsJson) as List<dynamic>)
             .map((e) => e.toString())
-            .join('、');
-        contextSummary = '風險:${latestRisk.riskLevel}，原因:$reasons';
+            .join(language == AppLanguage.zhTw ? '、' : ', ');
+        contextSummary = copy.riskContext(latestRisk.riskLevel, reasons);
       }
 
       final reply = await repository.sendMessage(
@@ -323,7 +334,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('傳送失敗：$error')));
+        ).showSnackBar(SnackBar(content: Text(copy.sendFailed(error))));
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -331,6 +342,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _showHighRiskSheet() async {
+    final copy = AppStrings.of(ref.read(appLanguageControllerProvider));
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -356,7 +368,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '偵測到高風險訊號',
+                        copy.highRiskDetected,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -368,7 +380,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '如果你有立即危險，請立刻撥打 110 / 119。你也可以先進入安全流程，取得求助資源與一鍵複製訊息。',
+                  copy.highRiskSheetBody,
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.6,
@@ -392,7 +404,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text('前往安全流程'),
+                    child: Text(copy.goToSafety),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -408,7 +420,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text('我想再聊一下'),
+                    child: Text(copy.keepChatting),
                   ),
                 ),
               ],
@@ -423,6 +435,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Widget build(BuildContext context) {
     final messages = ref.watch(chatMessagesProvider);
     final theme = Theme.of(context);
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
 
     ref.listen<AsyncValue<double>>(ttsSpeechRateProvider, (previous, next) {
       next.whenData(_applyTtsSpeechRate);
@@ -437,7 +450,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return Scaffold(
       backgroundColor: PsyGuardTheme.background,
       appBar: AppBar(
-        title: const Text('AI 陪伴'),
+        title: Text(copy.chatTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.go('/home'),
@@ -468,7 +481,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          '今天有什麼想聊聊的嗎？',
+                          copy.chatEmptyTitle,
                           style: TextStyle(
                             color: PsyGuardTheme.textSecondary,
                             fontSize: 17,
@@ -477,7 +490,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '我在這裡傾聽你',
+                          copy.chatEmptySubtitle,
                           style: TextStyle(
                             color: PsyGuardTheme.textLight,
                             fontSize: 14,
@@ -494,7 +507,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   itemBuilder: (context, index) {
                     final msg = items[index];
                     final isUser = msg.role == 'user';
-                    return _buildMessageBubble(context, msg, isUser);
+                    return _buildMessageBubble(context, msg, isUser, copy);
                   },
                 );
               },
@@ -502,11 +515,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 child: CircularProgressIndicator(color: PsyGuardTheme.primary),
               ),
               error: (error, stack) => Center(
-                child: Text('載入失敗：$error', style: theme.textTheme.bodyMedium),
+                child: Text(
+                  copy.loadFailed(error),
+                  style: theme.textTheme.bodyMedium,
+                ),
               ),
             ),
           ),
-          _buildInputArea(context),
+          _buildInputArea(context, copy),
         ],
       ),
     );
@@ -516,6 +532,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     BuildContext context,
     ChatMessage msg,
     bool isUser,
+    AppStrings copy,
   ) {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -566,15 +583,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           ? Icons.play_arrow_rounded
                           : Icons.pause_rounded,
                       label: _ttsPlaybackState == _TtsPlaybackState.paused
-                          ? '繼續播放'
-                          : '暫停',
+                          ? copy.ttsResume
+                          : copy.ttsPause,
                       onTap: _ttsPlaybackState == _TtsPlaybackState.paused
                           ? _resumeSpeaking
                           : _pauseSpeaking,
                     ),
                     _buildTtsActionButton(
                       icon: Icons.stop_rounded,
-                      label: '終止',
+                      label: copy.ttsStop,
                       onTap: _stopSpeaking,
                     ),
                   ],
@@ -582,7 +599,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               else
                 _buildTtsActionButton(
                   icon: Icons.volume_up_rounded,
-                  label: '朗讀',
+                  label: copy.ttsRead,
                   onTap: () => _speakMessage(msg),
                 ),
             ],
@@ -624,7 +641,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
-  Widget _buildInputArea(BuildContext context) {
+  Widget _buildInputArea(BuildContext context, AppStrings copy) {
     return Container(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -682,12 +699,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   fontSize: 15,
                   color: PsyGuardTheme.textPrimary,
                 ),
-                decoration: const InputDecoration(
-                  hintText: '輸入你的感受...',
+                decoration: InputDecoration(
+                  hintText: copy.chatHint,
                   border: InputBorder.none,
                   focusedBorder: InputBorder.none,
                   enabledBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 onSubmitted: (_) => _send(),
               ),
@@ -729,5 +746,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ],
       ),
     );
+  }
+
+  String _ttsLanguageFor(AppLanguage language) {
+    return language == AppLanguage.zhTw ? 'zh-TW' : 'en-US';
+  }
+
+  String _speechLocaleFor(AppLanguage language) {
+    return language == AppLanguage.zhTw ? 'zh_TW' : 'en_US';
   }
 }

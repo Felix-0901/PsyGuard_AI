@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/export/summary_export_service.dart';
 import '../../../core/export/export_models.dart';
+import '../../../core/security/local_settings_service.dart';
 import '../../../core/storage/database_provider.dart'; // Added
 import '../../../core/data/mock_data_seeder.dart'; // Added
+import '../../../l10n/app_strings.dart';
 import '../../home/presentation/home_page.dart'; // Added
 import '../../trends/presentation/trends_page.dart'; // Added
 
@@ -23,21 +25,25 @@ class _ExportPageState extends ConsumerState<ExportPage> {
 
   Future<void> _export() async {
     if (_exporting) return;
+    final copy = AppStrings.of(ref.read(appLanguageControllerProvider));
     setState(() => _exporting = true);
 
     try {
       final service = ref.read(summaryExportServiceProvider);
-      final file = await service.exportSummary(days: _days, format: ExportFormat.json);
+      final file = await service.exportSummary(
+        days: _days,
+        format: ExportFormat.json,
+      );
 
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('已匯出至：${file.path}')));
+      ).showSnackBar(SnackBar(content: Text(copy.exportedTo(file.path))));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('匯出失敗：$e')));
+      ).showSnackBar(SnackBar(content: Text(copy.exportFailed(e))));
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -45,10 +51,11 @@ class _ExportPageState extends ConsumerState<ExportPage> {
 
   @override
   Widget build(BuildContext context) {
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
     return Scaffold(
       backgroundColor: PsyGuardTheme.background,
       appBar: AppBar(
-        title: const Text('匯出報告'),
+        title: Text(copy.exportTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.go('/home'),
@@ -63,7 +70,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                 child: Transform.rotate(
                   angle: -0.3,
                   child: Text(
-                    '案號 115-E018647',
+                    copy.emergencyCase,
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.w900,
@@ -78,136 +85,138 @@ class _ExportPageState extends ConsumerState<ExportPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: PsyGuardTheme.softCard,
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: PsyGuardTheme.surface,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.description_rounded,
-                      size: 48,
-                      color: PsyGuardTheme.primary.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    '$_days 日身心報告',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: PsyGuardTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '將近 $_days 天的心情、睡眠、風險趨勢摘要匯出為 JSON，可分享給專業人員。',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: PsyGuardTheme.textSecondary,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.center,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: PsyGuardTheme.softCard,
+                  child: Column(
                     children: [
-                      for (final days in [7, 14, 30])
-                        FilterChip(
-                          label: Text('$days 天'),
-                          selected: _days == days,
-                          showCheckmark: false,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() => _days = days);
-                            }
-                          },
-                          selectedColor: PsyGuardTheme.primary,
-                          backgroundColor: PsyGuardTheme.surface,
-                          labelStyle: TextStyle(
-                            color: _days == days
-                                ? Colors.white
-                                : PsyGuardTheme.textSecondary,
-                            fontWeight: _days == days
-                                ? FontWeight.w600
-                                : FontWeight.normal,
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: PsyGuardTheme.surface,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.description_rounded,
+                          size: 48,
+                          color: PsyGuardTheme.primary.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        copy.exportReportTitle(_days),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: PsyGuardTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        copy.exportReportBody(_days),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: PsyGuardTheme.textSecondary,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          for (final days in [7, 14, 30])
+                            FilterChip(
+                              label: Text(copy.days(days)),
+                              selected: _days == days,
+                              showCheckmark: false,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() => _days = days);
+                                }
+                              },
+                              selectedColor: PsyGuardTheme.primary,
+                              backgroundColor: PsyGuardTheme.surface,
+                              labelStyle: TextStyle(
+                                color: _days == days
+                                    ? Colors.white
+                                    : PsyGuardTheme.textSecondary,
+                                fontWeight: _days == days
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 28),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          onPressed: _exporting ? null : _export,
+                          icon: _exporting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.download_rounded),
+                          label: Text(
+                            _exporting ? copy.exporting : copy.generateAndSave,
                           ),
                         ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 28),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: _exporting ? null : _export,
-                      icon: _exporting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.download_rounded),
-                      label: Text(_exporting ? '匯出中...' : '產生 & 儲存'),
-                    ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: PsyGuardTheme.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: PsyGuardTheme.primary.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    color: PsyGuardTheme.primary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '報告僅供參考，非醫療診斷。',
-                      style: TextStyle(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
                         color: PsyGuardTheme.primary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
+                        size: 20,
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          copy.reportDisclaimer,
+                          style: TextStyle(
+                            color: PsyGuardTheme.primary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            const Spacer(),
-            // ── Developer Options ───────────────────────────────────────────
-            TextButton.icon(
-              onPressed: _exporting ? null : _resetAndSeedData,
-              icon: const Icon(Icons.dataset_linked_rounded, size: 18),
-              label: const Text('重置並匯入模擬資料 (Demo)'),
-              style: TextButton.styleFrom(
-                foregroundColor: PsyGuardTheme.textLight,
-              ),
-            ),
-          ],
+                const Spacer(),
+                // ── Developer Options ───────────────────────────────────────────
+                TextButton.icon(
+                  onPressed: _exporting ? null : _resetAndSeedData,
+                  icon: const Icon(Icons.dataset_linked_rounded, size: 18),
+                  label: Text(copy.resetDemoData),
+                  style: TextButton.styleFrom(
+                    foregroundColor: PsyGuardTheme.textLight,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -216,15 +225,16 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   }
 
   Future<void> _resetAndSeedData() async {
+    final copy = AppStrings.of(ref.read(appLanguageControllerProvider));
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('重置資料'),
-        content: const Text('確定要刪除所有現有資料，並匯入 6 個月的模擬數據嗎？\n此動作無法復原。'),
+        title: Text(copy.resetData),
+        content: Text(copy.resetDemoConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(copy.cancel),
           ), // TextButton
           FilledButton(
             style: FilledButton.styleFrom(
@@ -232,7 +242,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('重置'),
+            child: Text(copy.reset),
           ),
         ],
       ),
@@ -255,14 +265,14 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('已重置並匯入模擬資料！')));
+      ).showSnackBar(SnackBar(content: Text(copy.demoDataImported)));
       // Go home to refresh
       context.go('/home');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('操作失敗：$e')));
+      ).showSnackBar(SnackBar(content: Text(copy.operationFailed(e))));
     } finally {
       if (mounted) setState(() => _exporting = false);
     }

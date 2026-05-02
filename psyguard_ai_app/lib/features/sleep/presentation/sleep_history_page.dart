@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/storage/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/security/local_settings_service.dart';
+import '../../../l10n/app_strings.dart';
 
 class SleepHistoryPage extends ConsumerWidget {
   const SleepHistoryPage({super.key});
@@ -13,6 +15,7 @@ class SleepHistoryPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final db = ref.watch(appDatabaseProvider);
     final theme = Theme.of(context);
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
 
     return Scaffold(
       backgroundColor: PsyGuardTheme.background,
@@ -22,7 +25,7 @@ class SleepHistoryPage extends ConsumerWidget {
         centerTitle: true,
         leading: BackButton(color: PsyGuardTheme.textPrimary),
         title: Text(
-          '睡眠歷史紀錄',
+          copy.isZhTw ? '睡眠歷史紀錄' : 'Sleep History',
           style: GoogleFonts.varelaRound(
             color: PsyGuardTheme.textPrimary,
             fontWeight: FontWeight.bold,
@@ -38,7 +41,7 @@ class SleepHistoryPage extends ConsumerWidget {
             );
           }
           if (snapshot.hasError) {
-            return Center(child: Text('載入失敗: ${snapshot.error}'));
+            return Center(child: Text(copy.loadFailed(snapshot.error!)));
           }
 
           final logs = snapshot.data ?? [];
@@ -55,7 +58,7 @@ class SleepHistoryPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '尚無睡眠紀錄',
+                    copy.isZhTw ? '尚無睡眠紀錄' : 'No sleep records yet',
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: PsyGuardTheme.textSecondary,
                     ),
@@ -92,18 +95,24 @@ class SleepHistoryPage extends ConsumerWidget {
                             fontSize: 14,
                           ),
                         ),
-                        _buildQualityBadge(log.difficulty),
+                        _buildQualityBadge(log.difficulty, copy),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildInfoColumn('入睡時間', _formatTime(log.bedtime)),
-                        _buildInfoColumn('起床時間', _formatTime(log.waketime)),
                         _buildInfoColumn(
-                          '總時數',
-                          '${log.sleepHours.toStringAsFixed(1)} 小時',
+                          copy.bedtime,
+                          _formatTime(log.bedtime),
+                        ),
+                        _buildInfoColumn(
+                          copy.waketime,
+                          _formatTime(log.waketime),
+                        ),
+                        _buildInfoColumn(
+                          copy.isZhTw ? '總時數' : 'Total',
+                          copy.hours(log.sleepHours),
                           isHighlight: true,
                         ),
                       ],
@@ -152,22 +161,22 @@ class SleepHistoryPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildQualityBadge(int difficulty) {
+  Widget _buildQualityBadge(int difficulty, AppStrings copy) {
     // difficulty: 0 (沒有困難) to 3 (嚴重)
     String label;
     Color color;
 
     if (difficulty <= 0) {
-      label = '品質優良';
+      label = copy.isZhTw ? '品質優良' : 'Excellent';
       color = PsyGuardTheme.success;
     } else if (difficulty <= 1) {
-      label = '品質良好';
+      label = copy.isZhTw ? '品質良好' : 'Good';
       color = PsyGuardTheme.success;
     } else if (difficulty == 2) {
-      label = '品質普通';
+      label = copy.isZhTw ? '品質普通' : 'Fair';
       color = PsyGuardTheme.textSecondary;
     } else {
-      label = '品質不佳';
+      label = copy.isZhTw ? '品質不佳' : 'Poor';
       color = PsyGuardTheme.error;
     }
 

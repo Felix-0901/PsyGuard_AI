@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/storage/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/security/local_settings_service.dart';
+import '../../../l10n/app_strings.dart';
 
 class CheckinHistoryPage extends ConsumerWidget {
   const CheckinHistoryPage({super.key});
@@ -13,6 +15,7 @@ class CheckinHistoryPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final db = ref.watch(appDatabaseProvider);
     final theme = Theme.of(context);
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
 
     return Scaffold(
       backgroundColor: PsyGuardTheme.background,
@@ -22,7 +25,7 @@ class CheckinHistoryPage extends ConsumerWidget {
         centerTitle: true,
         leading: BackButton(color: PsyGuardTheme.textPrimary),
         title: Text(
-          '筆記紀錄歷史',
+          copy.isZhTw ? '筆記紀錄歷史' : 'Check-in History',
           style: GoogleFonts.varelaRound(
             color: PsyGuardTheme.textPrimary,
             fontWeight: FontWeight.bold,
@@ -38,7 +41,7 @@ class CheckinHistoryPage extends ConsumerWidget {
             );
           }
           if (snapshot.hasError) {
-            return Center(child: Text('載入失敗: ${snapshot.error}'));
+            return Center(child: Text(copy.loadFailed(snapshot.error!)));
           }
 
           final checkins = snapshot.data ?? [];
@@ -55,7 +58,7 @@ class CheckinHistoryPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '尚無紀錄',
+                    copy.isZhTw ? '尚無紀錄' : 'No records yet',
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: PsyGuardTheme.textSecondary,
                     ),
@@ -92,7 +95,7 @@ class CheckinHistoryPage extends ConsumerWidget {
                             fontSize: 14,
                           ),
                         ),
-                        _buildScoreBadge('心情', checkin.moodScore),
+                        _buildScoreBadge(copy.mood, checkin.moodScore),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -107,7 +110,7 @@ class CheckinHistoryPage extends ConsumerWidget {
                       ),
                     ] else
                       Text(
-                        '無文字筆記',
+                        copy.isZhTw ? '無文字筆記' : 'No text note',
                         style: GoogleFonts.nunitoSans(
                           color: PsyGuardTheme.textLight,
                           fontSize: 14,
@@ -117,9 +120,9 @@ class CheckinHistoryPage extends ConsumerWidget {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        _buildSmallBadge('能量', checkin.energyScore),
+                        _buildSmallBadge(copy.energy, checkin.energyScore),
                         const SizedBox(width: 8),
-                        _buildSmallBadge('壓力', checkin.stressScore),
+                        _buildSmallBadge(copy.stress, checkin.stressScore),
                       ],
                     ),
                   ],

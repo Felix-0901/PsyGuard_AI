@@ -13,6 +13,8 @@ import '../../../core/widgets/app_brand_icon.dart';
 import '../../../core/widgets/micro_shake.dart';
 import '../../../core/widgets/tooltip_bubble.dart';
 import '../../../core/widgets/brand_loading_indicator.dart';
+import '../../../core/security/local_settings_service.dart';
+import '../../../l10n/app_strings.dart';
 
 class HomeDashboard {
   HomeDashboard({
@@ -57,18 +59,6 @@ final homeDashboardProvider = FutureProvider<HomeDashboard>((ref) async {
   );
 });
 
-// ── Long-press tooltip content ──────────────────────────────────────
-const _tooltipData = <String, Map<String, String>>{
-  'AI 陪伴': {'title': 'AI 陪伴', 'desc': '有些時候，你只需要被聽見，我會一直在，安靜陪著你。'},
-  '筆記紀錄': {'title': '筆記紀錄', 'desc': '把心裡的感受寫下來，讓自己慢慢看見、慢慢理解。'},
-  '身心趨勢': {'title': '身心趨勢', 'desc': '用溫柔的方式，看見你的變化，一步步找回自己的節奏。'},
-  '心理工具箱': {'title': '心理工具箱', 'desc': '當你開始感到不安，我會陪你慢慢穩下來。'},
-  '行政救援': {'title': '行政救援（案號）', 'desc': '緊急時刻，為你媒合校園與市府實體資源。'},
-  '睡眠紀錄': {'title': '睡眠紀錄', 'desc': '看見每晚的睡眠變化，慢慢找回適合自己的作息節奏。'},
-  '匯出報告': {'title': '匯出報告', 'desc': '把你的狀態整理成一份安心，需要時也能分享給專業的人。'},
-  '安全流程': {'title': '安全流程', 'desc': '提供即時的求助資源和安全步驟，在緊急時刻保護你的安全。'},
-};
-
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -76,10 +66,13 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(homeDashboardProvider);
     final theme = Theme.of(context);
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
 
     // Dynamic greeting
     final hour = DateTime.now().hour;
-    final greeting = hour < 12 ? '早安，' : (hour < 18 ? '午安，' : '晚安，');
+    final greeting = hour < 12
+        ? copy.goodMorning
+        : (hour < 18 ? copy.goodAfternoon : copy.goodEvening);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -115,28 +108,32 @@ class HomePage extends ConsumerWidget {
           ),
         ),
         body: dashboard.when(
-          data: (data) =>
-              _HomeContent(data: data, greeting: greeting, theme: theme),
+          data: (data) => _HomeContent(
+            data: data,
+            greeting: greeting,
+            theme: theme,
+            copy: copy,
+          ),
           loading: () =>
-              const Center(child: BrandLoadingIndicator(message: '載入中...')),
-          error: (error, stack) => Center(child: Text('載入失敗: $error')),
+              Center(child: BrandLoadingIndicator(message: copy.loading)),
+          error: (error, stack) => Center(child: Text(copy.loadFailed(error))),
         ),
-        drawer: _buildDrawer(context),
+        drawer: _buildDrawer(context, copy),
       ),
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
+  Widget _buildDrawer(BuildContext context, AppStrings copy) {
     final items = [
-      ('/home', '首頁', Icons.home_rounded),
-      ('/chat', 'AI 陪伴', Icons.chat_bubble_rounded),
-      ('/checkin', '筆記紀錄', Icons.edit_note_rounded),
-      ('/sleep', '睡眠紀錄', Icons.bedtime_rounded),
-      ('/trends', '趨勢圖', Icons.timeline_rounded),
-      ('/tools', '心理工具箱', Icons.style_rounded),
-      ('/safety', '安全流程', Icons.health_and_safety_rounded),
-      ('/export', '匯出報告', Icons.download_rounded),
-      ('/settings', '設定', Icons.settings_rounded),
+      ('/home', copy.navHome, Icons.home_rounded),
+      ('/chat', copy.navChat, Icons.chat_bubble_rounded),
+      ('/checkin', copy.navCheckin, Icons.edit_note_rounded),
+      ('/sleep', copy.navSleep, Icons.bedtime_rounded),
+      ('/trends', copy.navTrends, Icons.timeline_rounded),
+      ('/tools', copy.navTools, Icons.style_rounded),
+      ('/safety', copy.navSafety, Icons.health_and_safety_rounded),
+      ('/export', copy.navExport, Icons.download_rounded),
+      ('/settings', copy.navSettings, Icons.settings_rounded),
     ];
 
     return Drawer(
@@ -230,11 +227,13 @@ class _HomeContent extends StatefulWidget {
     required this.data,
     required this.greeting,
     required this.theme,
+    required this.copy,
   });
 
   final HomeDashboard data;
   final String greeting;
   final ThemeData theme;
+  final AppStrings copy;
 
   @override
   State<_HomeContent> createState() => _HomeContentState();
@@ -265,41 +264,54 @@ class _HomeContentState extends State<_HomeContent> {
   @override
   Widget build(BuildContext context) {
     final theme = widget.theme;
+    final copy = widget.copy;
     final riskColor = PsyGuardTheme.riskColor(_riskScore);
     final riskLabel = switch (_riskLevel) {
-      'high' => '需要被關注',
-      'medium' => '留意中',
-      _ => '狀態良好',
+      'high' => copy.statusNeedsAttention,
+      'medium' => copy.statusWatchful,
+      _ => copy.statusGood,
     };
 
     final exploreCards = [
       _cardData(
-        '筆記紀錄',
-        '情緒抒發',
+        copy.navCheckin,
+        copy.emotionalRelease,
         Icons.edit_note_rounded,
         const Color(0xFFD4A373),
         '/checkin',
+        copy.isZhTw
+            ? '把心裡的感受寫下來，讓自己慢慢看見、慢慢理解。'
+            : 'Write down what you feel so you can see and understand it more gently.',
       ),
       _cardData(
-        '身心趨勢',
-        '健康數據趨勢',
+        copy.trendsTitle,
+        copy.healthDataTrends,
         Icons.favorite_rounded,
         const Color(0xFFE5989B),
         '/trends',
+        copy.isZhTw
+            ? '用溫柔的方式，看見你的變化，一步步找回自己的節奏。'
+            : 'See your changes gently and find your rhythm step by step.',
       ),
       _cardData(
-        'AI 陪伴',
-        '舒心對話',
+        copy.navChat,
+        copy.supportiveChat,
         Icons.chat_bubble_outline_rounded,
         const Color(0xFF5B8C85),
         '/chat',
+        copy.isZhTw
+            ? '有些時候，你只需要被聽見，我會一直在，安靜陪著你。'
+            : 'Sometimes you just need to be heard. I am here with you.',
       ),
       _cardData(
-        '睡眠紀錄',
-        '記錄睡眠狀況',
+        copy.navSleep,
+        copy.sleepStatus,
         Icons.bedtime_outlined,
         const Color(0xFF6D8299),
         '/sleep',
+        copy.isZhTw
+            ? '看見每晚的睡眠變化，慢慢找回適合自己的作息節奏。'
+            : 'Track nightly sleep changes and rebuild a rhythm that fits you.',
       ),
     ];
 
@@ -316,7 +328,7 @@ class _HomeContentState extends State<_HomeContent> {
           ),
         ),
         Text(
-          '願你擁有平靜的一天',
+          copy.peacefulDay,
           style: theme.textTheme.bodyLarge?.copyWith(
             color: PsyGuardTheme.textSecondary,
           ),
@@ -351,7 +363,7 @@ class _HomeContentState extends State<_HomeContent> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text('今日身心狀態', style: theme.textTheme.bodyMedium),
+                    Text(copy.todayStatus, style: theme.textTheme.bodyMedium),
                   ],
                 ),
               ),
@@ -364,20 +376,24 @@ class _HomeContentState extends State<_HomeContent> {
           MicroShake(
             enabled: true,
             child: _InteractiveCard(
-              title: '行政救援',
-              subtitle: '案號 115-E018647',
+              title: copy.isZhTw ? '行政救援' : 'Emergency Support',
+              subtitle: copy.emergencyCase,
               icon: Icons.emergency_rounded,
               color: const Color(0xFFD14343),
               route: '/safety',
               isBold: true,
               isFullWidth: true,
+              tooltipTitle: copy.isZhTw ? '行政救援（案號）' : 'Emergency Support',
+              tooltipDescription: copy.isZhTw
+                  ? '緊急時刻，為你媒合校園與市府實體資源。'
+                  : 'Connect with campus and city support resources in urgent moments.',
             ),
           ),
           const SizedBox(height: 32),
         ],
 
         // ── Explore Section ──────────────────────────
-        Text('探索自我', style: theme.textTheme.titleMedium),
+        Text(copy.exploreSelf, style: theme.textTheme.titleMedium),
         const SizedBox(height: 16),
         GridView.count(
           shrinkWrap: true,
@@ -389,10 +405,8 @@ class _HomeContentState extends State<_HomeContent> {
           children: exploreCards.map((card) {
             final isBoldTarget =
                 _hasNegativeSignal &&
-                (card['title'] == 'AI 陪伴' || card['title'] == '心理工具箱');
-            final isShakeTarget =
-                _isHighRisk &&
-                (card['title'] == '行政救援' || card['title'] == '安全流程');
+                (card['route'] == '/chat' || card['route'] == '/tools');
+            final isShakeTarget = _isHighRisk && (card['route'] == '/safety');
 
             return MicroShake(
               enabled: isShakeTarget,
@@ -403,6 +417,8 @@ class _HomeContentState extends State<_HomeContent> {
                 color: card['color'] as Color,
                 route: card['route'] as String,
                 isBold: isBoldTarget,
+                tooltipTitle: card['title'] as String,
+                tooltipDescription: card['tooltip'] as String,
               ),
             );
           }).toList(),
@@ -410,7 +426,7 @@ class _HomeContentState extends State<_HomeContent> {
         const SizedBox(height: 32),
 
         // ── More Functions ───────────────────────────
-        Text('更多功能', style: theme.textTheme.titleMedium),
+        Text(copy.moreFeatures, style: theme.textTheme.titleMedium),
         const SizedBox(height: 16),
         GridView.count(
           shrinkWrap: true,
@@ -423,20 +439,28 @@ class _HomeContentState extends State<_HomeContent> {
             MicroShake(
               enabled: _isHighRisk,
               child: _InteractiveCard(
-                title: '心理工具箱',
-                subtitle: '心情急救',
+                title: copy.navTools,
+                subtitle: copy.moodFirstAid,
                 icon: Icons.medical_services_rounded,
                 color: const Color(0xFF6B4C9A),
                 route: '/tools',
                 isBold: _hasNegativeSignal,
+                tooltipTitle: copy.navTools,
+                tooltipDescription: copy.isZhTw
+                    ? '當你開始感到不安，我會陪你慢慢穩下來。'
+                    : 'When you start to feel unsettled, these tools can help you steady yourself.',
               ),
             ),
             _InteractiveCard(
-              title: '匯出報告',
-              subtitle: '下載 7 日身心摘要',
+              title: copy.navExport,
+              subtitle: copy.sevenDaySummary,
               icon: Icons.mark_email_read_rounded,
               color: const Color(0xFF667EEA),
               route: '/export',
+              tooltipTitle: copy.navExport,
+              tooltipDescription: copy.isZhTw
+                  ? '把你的狀態整理成一份安心，需要時也能分享給專業的人。'
+                  : 'Turn your records into a clear summary you can share with a professional.',
             ),
           ],
         ),
@@ -452,6 +476,7 @@ class _HomeContentState extends State<_HomeContent> {
     IconData icon,
     Color color,
     String route,
+    String tooltip,
   ) {
     return {
       'title': title,
@@ -459,6 +484,7 @@ class _HomeContentState extends State<_HomeContent> {
       'icon': icon,
       'color': color,
       'route': route,
+      'tooltip': tooltip,
     };
   }
 }
@@ -474,6 +500,8 @@ class _InteractiveCard extends StatefulWidget {
     required this.route,
     this.isBold = false,
     this.isFullWidth = false,
+    this.tooltipTitle,
+    this.tooltipDescription,
   });
 
   final String title;
@@ -483,6 +511,8 @@ class _InteractiveCard extends StatefulWidget {
   final String route;
   final bool isBold;
   final bool isFullWidth;
+  final String? tooltipTitle;
+  final String? tooltipDescription;
 
   @override
   State<_InteractiveCard> createState() => _InteractiveCardState();
@@ -494,7 +524,6 @@ class _InteractiveCardState extends State<_InteractiveCard>
 
   @override
   Widget build(BuildContext context) {
-    final tooltip = _tooltipData[widget.title];
     final bgColor = widget.color.withValues(alpha: 0.08);
 
     return GestureDetector(
@@ -507,11 +536,11 @@ class _InteractiveCardState extends State<_InteractiveCard>
       onTapCancel: () => setState(() => _scale = 1.0),
       onLongPress: () {
         HapticFeedback.mediumImpact();
-        if (tooltip != null) {
+        if (widget.tooltipTitle != null && widget.tooltipDescription != null) {
           showFeatureTooltip(
             context,
-            title: tooltip['title']!,
-            description: tooltip['desc']!,
+            title: widget.tooltipTitle!,
+            description: widget.tooltipDescription!,
           );
         }
       },

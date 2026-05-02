@@ -130,7 +130,7 @@ class AiChatRepositoryImpl implements AiChatRepository {
       content: aiFallbackReplyFor(_language),
       isFallback: true,
       model: _config.model,
-      warningMessage: userFacingAiError(lastError),
+      warningMessage: userFacingAiError(lastError, language: _language),
     );
   }
 
@@ -482,7 +482,7 @@ class AiChatRepositoryImpl implements AiChatRepository {
       );
       return content;
     } catch (error) {
-      throw AiRequestException(userFacingAiError(error));
+      throw AiRequestException(userFacingAiError(error, language: _language));
     }
   }
 

@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/security/local_settings_service.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../core/storage/database_provider.dart';
+import '../../../l10n/app_strings.dart';
 
 final toolHistoryProvider = FutureProvider<List<ToolUsage>>((ref) async {
   final db = ref.read(appDatabaseProvider);
@@ -15,18 +17,18 @@ final toolHistoryProvider = FutureProvider<List<ToolUsage>>((ref) async {
 class ToolHistoryPage extends ConsumerWidget {
   const ToolHistoryPage({super.key});
 
-  String _getToolName(String id) {
+  String _getToolName(String id, AppStrings copy) {
     switch (id) {
       case 'self_dialogue':
-        return '自我對話卡';
+        return copy.selfDialogueCard;
       case 'breathing_478':
-        return '4-7-8 呼吸';
+        return copy.breathing478;
       case 'grounding_54321':
-        return '5-4-3-2-1 著地';
+        return copy.grounding54321;
       case 'emotion_dict':
-        return '情緒詞彙庫';
+        return copy.emotionDictionary;
       default:
-        return '未知工具';
+        return copy.isZhTw ? '未知工具' : 'Unknown tool';
     }
   }
 
@@ -63,11 +65,12 @@ class ToolHistoryPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(toolHistoryProvider);
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
 
     return Scaffold(
       backgroundColor: PsyGuardTheme.background,
       appBar: AppBar(
-        title: const Text('練習紀錄'),
+        title: Text(copy.toolHistory),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.pop(),
@@ -87,7 +90,7 @@ class ToolHistoryPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '還沒有練習紀錄',
+                    copy.isZhTw ? '還沒有練習紀錄' : 'No practice records yet',
                     style: TextStyle(
                       color: PsyGuardTheme.textSecondary,
                       fontSize: 16,
@@ -139,7 +142,7 @@ class ToolHistoryPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _getToolName(log.toolId),
+                            _getToolName(log.toolId, copy),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -167,8 +170,8 @@ class ToolHistoryPage extends ConsumerWidget {
                           color: PsyGuardTheme.success.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
-                          '完成',
+                        child: Text(
+                          copy.isZhTw ? '完成' : 'Done',
                           style: TextStyle(
                             fontSize: 12,
                             color: PsyGuardTheme.success,
@@ -183,7 +186,7 @@ class ToolHistoryPage extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('載入失敗: $err')),
+        error: (err, stack) => Center(child: Text(copy.loadFailed(err))),
       ),
     );
   }

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class AppFrame extends StatelessWidget {
+import '../../core/security/local_settings_service.dart';
+import '../../l10n/app_strings.dart';
+
+class AppFrame extends ConsumerWidget {
   const AppFrame({
     super.key,
     required this.title,
@@ -16,7 +20,8 @@ class AppFrame extends StatelessWidget {
   final List<Widget>? actions;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
     return Scaffold(
       appBar: AppBar(title: Text(title), actions: actions),
       drawer: Drawer(
@@ -40,7 +45,7 @@ class AppFrame extends StatelessWidget {
                 ),
               ),
             ),
-            ..._menuItems(context),
+            ..._menuItems(context, copy),
           ],
         ),
       ),
@@ -50,16 +55,16 @@ class AppFrame extends StatelessWidget {
     );
   }
 
-  List<Widget> _menuItems(BuildContext context) {
+  List<Widget> _menuItems(BuildContext context, AppStrings copy) {
     final items = [
-      ('/home', '首頁'),
-      ('/chat', 'AI 對話'),
-      ('/checkin', '30 秒心情'),
-      ('/sleep', '睡眠紀錄'),
-      ('/trends', '趨勢圖'),
-      ('/tools', '工具庫'),
-      ('/safety', 'Safety Flow'),
-      ('/export', '匯出摘要'),
+      ('/home', copy.navHome),
+      ('/chat', copy.navChat),
+      ('/checkin', copy.navCheckin),
+      ('/sleep', copy.navSleep),
+      ('/trends', copy.navTrends),
+      ('/tools', copy.navTools),
+      ('/safety', copy.navSafety),
+      ('/export', copy.navExport),
     ];
 
     return items.map((item) {

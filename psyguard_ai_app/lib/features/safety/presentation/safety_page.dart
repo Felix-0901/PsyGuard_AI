@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/risk_engine/risk_models.dart';
 import '../../../core/safety/safety_flow_service.dart';
+import '../../../core/security/local_settings_service.dart';
 import '../../../core/storage/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../l10n/app_language.dart';
+import '../../../l10n/app_strings.dart';
 
 final latestRiskLevelProvider = FutureProvider<RiskLevel>((ref) async {
   final snapshot = await ref.read(appDatabaseProvider).getLatestRiskSnapshot();
@@ -23,10 +26,12 @@ class SafetyPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final riskLevelAsync = ref.watch(latestRiskLevelProvider);
+    final language = ref.watch(appLanguageControllerProvider);
+    final copy = AppStrings.of(language);
     return Scaffold(
       backgroundColor: PsyGuardTheme.background,
       appBar: AppBar(
-        title: const Text('安全流程'),
+        title: Text(copy.safetyTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.go('/home'),
@@ -34,9 +39,11 @@ class SafetyPage extends ConsumerWidget {
       ),
       body: riskLevelAsync.when(
         data: (riskLevel) {
-          final plan = ref.read(safetyFlowServiceProvider).getPlan(
+          final plan = ref
+              .read(safetyFlowServiceProvider)
+              .getPlan(
                 riskLevel: riskLevel,
-                locale: 'zh-TW',
+                locale: language == AppLanguage.zhTw ? 'zh-TW' : 'en-US',
               );
 
           return ListView(
@@ -79,8 +86,8 @@ class SafetyPage extends ConsumerWidget {
                         children: [
                           Text(
                             riskLevel == RiskLevel.high
-                                ? '先確保安全'
-                                : '需要協助嗎？',
+                                ? copy.safetyFirst
+                                : copy.needHelpQuestion,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -88,9 +95,9 @@ class SafetyPage extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            '若有立即危險請先撥打 110 / 119。',
-                            style: TextStyle(
+                          Text(
+                            copy.immediateDangerCall,
+                            style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 13,
                               height: 1.4,
@@ -103,20 +110,20 @@ class SafetyPage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              _sectionTitle('求助資源'),
+              _sectionTitle(copy.supportResources),
               const SizedBox(height: 12),
               ...plan.resources.expand((r) sync* {
                 yield _resourceCard(
                   context,
+                  copy: copy,
                   name: r.name,
                   contact: r.contact,
                   description: r.description,
                 );
                 yield const SizedBox(height: 12);
-              }).toList()
-                ..removeLast(),
+              }).toList()..removeLast(),
               const SizedBox(height: 18),
-              _sectionTitle('安全步驟'),
+              _sectionTitle(copy.safetySteps),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(18),
@@ -148,7 +155,7 @@ class SafetyPage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              _sectionTitle('一鍵複製求助訊息'),
+              _sectionTitle(copy.copyHelpMessage),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(18),
@@ -176,7 +183,7 @@ class SafetyPage extends ConsumerWidget {
                           );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('已複製求助訊息')),
+                              SnackBar(content: Text(copy.helpMessageCopied)),
                             );
                           }
                         },
@@ -188,7 +195,7 @@ class SafetyPage extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        child: const Text('複製'),
+                        child: Text(copy.copy),
                       ),
                     ),
                   ],
@@ -209,8 +216,7 @@ class SafetyPage extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(color: PsyGuardTheme.primary),
         ),
-        error: (error, stack) =>
-            Center(child: Text('載入失敗：$error')),
+        error: (error, stack) => Center(child: Text(copy.loadFailed(error))),
       ),
     );
   }
@@ -228,6 +234,7 @@ class SafetyPage extends ConsumerWidget {
 
   Widget _resourceCard(
     BuildContext context, {
+    required AppStrings copy,
     required String name,
     required String contact,
     required String description,
@@ -239,7 +246,7 @@ class SafetyPage extends ConsumerWidget {
               await Clipboard.setData(ClipboardData(text: contact));
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('已複製：$contact')),
+                  SnackBar(content: Text('${copy.copied}: $contact')),
                 );
               }
             },
@@ -289,7 +296,10 @@ class SafetyPage extends ConsumerWidget {
             if (contact.trim().isNotEmpty) ...[
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: PsyGuardTheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),

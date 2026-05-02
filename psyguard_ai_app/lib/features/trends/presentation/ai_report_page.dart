@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/security/local_settings_service.dart';
+import '../../../l10n/app_strings.dart';
 
-class AiReportPage extends StatelessWidget {
+class AiReportPage extends ConsumerWidget {
   const AiReportPage({super.key, required this.reportContent});
 
   final String reportContent;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('AI 分析報告'),
+        title: Text(copy.aiReportTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.pop(),
@@ -23,12 +27,12 @@ class AiReportPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.copy_rounded),
-            tooltip: '複製內容',
+            tooltip: copy.copyReport,
             onPressed: () {
               Clipboard.setData(ClipboardData(text: reportContent));
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(const SnackBar(content: Text('已複製報告內容')));
+              ).showSnackBar(SnackBar(content: Text(copy.reportCopied)));
             },
           ),
         ],

@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/risk_engine/risk_models.dart';
 import '../../../core/risk_engine/risk_provider.dart';
+import '../../../core/security/local_settings_service.dart';
 import '../../../core/storage/database_provider.dart';
+import '../../../l10n/app_strings.dart';
 
 class CheckinPage extends ConsumerStatefulWidget {
   const CheckinPage({super.key});
@@ -29,10 +31,11 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final copy = AppStrings.of(ref.read(appLanguageControllerProvider));
     if (_noteController.text.length > 200) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('補充文字請控制在 200 字內')));
+      ).showSnackBar(SnackBar(content: Text(copy.noteTooLong)));
       return;
     }
     setState(() => _saving = true);
@@ -66,7 +69,9 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
       setState(() => _saving = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已記錄！風險等級：${risk.riskLevelKey.toUpperCase()}')),
+        SnackBar(
+          content: Text(copy.savedRisk(risk.riskLevelKey.toUpperCase())),
+        ),
       );
 
       if (risk.riskLevel == RiskLevel.high) {
@@ -79,16 +84,17 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
       setState(() => _saving = false);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('儲存失敗：$e')));
+      ).showSnackBar(SnackBar(content: Text(copy.saveFailed(e))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
     return Scaffold(
       backgroundColor: PsyGuardTheme.background,
       appBar: AppBar(
-        title: const Text('筆記紀錄'),
+        title: Text(copy.checkinTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.go('/home'),
@@ -106,17 +112,17 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           _buildSliderSection(
-            title: '心情',
+            title: copy.mood,
             value: _mood,
             icon: _moodEmoji(_mood.round()),
             color: const Color(0xFF667EEA),
-            minAssistiveLabel: '很差',
-            maxAssistiveLabel: '很好',
+            minAssistiveLabel: copy.veryBad,
+            maxAssistiveLabel: copy.veryGood,
             onChanged: (v) => setState(() => _mood = v),
           ),
           const SizedBox(height: 16),
           _buildSliderSection(
-            title: '壓力',
+            title: copy.stress,
             value: _stress,
             icon: _stressEmoji(_stress.round()),
             color: const Color(0xFFF5576C),
@@ -124,7 +130,7 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
           ),
           const SizedBox(height: 16),
           _buildSliderSection(
-            title: '活力',
+            title: copy.energy,
             value: _energy,
             icon: _energyEmoji(_energy.round()),
             color: const Color(0xFF43E97B),
@@ -146,8 +152,8 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
                       size: 22,
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      '今日筆記',
+                    Text(
+                      copy.todayNote,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -164,7 +170,7 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
                     fontSize: 14,
                     color: PsyGuardTheme.textPrimary,
                   ),
-                  decoration: const InputDecoration(hintText: '想記下什麼嗎？（選填）'),
+                  decoration: InputDecoration(hintText: copy.noteHint),
                 ),
               ],
             ),
@@ -185,7 +191,7 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('完成紀錄'),
+                  : Text(copy.completeCheckin),
             ),
           ),
         ],
@@ -203,7 +209,10 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
     required ValueChanged<double> onChanged,
   }) {
     final percent = value.round().clamp(0, 100);
-    final moodLabel = title == '心情' ? _moodDescriptor(percent) : null;
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
+    final moodLabel = title == copy.mood
+        ? _moodDescriptor(percent, copy)
+        : null;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -332,12 +341,12 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
     );
   }
 
-  String _moodDescriptor(int value) {
-    if (value <= 20) return '很差';
-    if (value <= 40) return '不好';
-    if (value <= 60) return '普通';
-    if (value <= 80) return '不錯';
-    return '很好';
+  String _moodDescriptor(int value, AppStrings copy) {
+    if (value <= 20) return copy.veryBad;
+    if (value <= 40) return copy.bad;
+    if (value <= 60) return copy.okay;
+    if (value <= 80) return copy.good;
+    return copy.veryGood;
   }
 
   // ── 滑桿表情連動 (Slider Emoji Linkage) ─────────────────────────

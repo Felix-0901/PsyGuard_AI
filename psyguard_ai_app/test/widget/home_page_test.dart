@@ -41,9 +41,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('需要被關注'), findsOneWidget);
-      expect(find.text('AI 陪伴'), findsOneWidget);
-      expect(find.text('行政救援'), findsOneWidget);
+      expect(find.text('Needs attention'), findsOneWidget);
+      expect(find.text('AI Companion'), findsOneWidget);
+      expect(find.text('Emergency Support'), findsOneWidget);
 
       router.dispose();
       await db.close();

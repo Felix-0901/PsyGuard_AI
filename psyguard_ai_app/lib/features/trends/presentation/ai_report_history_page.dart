@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 
 import '../../../core/storage/app_database.dart';
 import '../../../core/storage/database_provider.dart';
+import '../../../core/security/local_settings_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../l10n/app_strings.dart';
 
 class AiReportHistoryPage extends ConsumerWidget {
   const AiReportHistoryPage({super.key});
@@ -13,11 +15,12 @@ class AiReportHistoryPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final db = ref.watch(appDatabaseProvider);
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('AI 分析歷史'),
+        title: Text(copy.analysisHistory),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.pop(),
@@ -30,16 +33,16 @@ class AiReportHistoryPage extends ConsumerWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('載入失敗: ${snapshot.error}'));
+            return Center(child: Text(copy.loadFailed(snapshot.error!)));
           }
 
           final data = snapshot.data ?? [];
 
           if (data.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                '目前沒有任何分析紀錄',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
+                copy.noAnalysisReports,
+                style: const TextStyle(color: Colors.grey, fontSize: 16),
               ),
             );
           }
@@ -50,7 +53,7 @@ class AiReportHistoryPage extends ConsumerWidget {
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final report = data[index];
-              return _ReportCard(report: report);
+              return _ReportCard(report: report, copy: copy);
             },
           );
         },
@@ -60,9 +63,10 @@ class AiReportHistoryPage extends ConsumerWidget {
 }
 
 class _ReportCard extends StatelessWidget {
-  const _ReportCard({required this.report});
+  const _ReportCard({required this.report, required this.copy});
 
   final AiReport report;
+  final AppStrings copy;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +99,7 @@ class _ReportCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '近 ${report.rangeDays} 天',
+                      copy.recentDays(report.rangeDays),
                       style: const TextStyle(
                         color: PsyGuardTheme.primary,
                         fontWeight: FontWeight.bold,
@@ -121,11 +125,11 @@ class _ReportCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
-                    '查看完整報告',
+                    copy.viewFullReport,
                     style: TextStyle(
                       color: PsyGuardTheme.primary,
                       fontSize: 12,

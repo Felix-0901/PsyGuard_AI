@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/risk_engine/risk_models.dart';
 import '../../../core/risk_engine/risk_provider.dart';
+import '../../../core/security/local_settings_service.dart';
 import '../../../core/storage/database_provider.dart';
+import '../../../l10n/app_strings.dart';
 
 class SleepPage extends ConsumerStatefulWidget {
   const SleepPage({super.key});
@@ -23,6 +25,7 @@ class _SleepPageState extends ConsumerState<SleepPage> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final copy = AppStrings.of(ref.read(appLanguageControllerProvider));
     setState(() => _saving = true);
 
     final now = DateTime.now();
@@ -47,7 +50,9 @@ class _SleepPageState extends ConsumerState<SleepPage> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已儲存！風險：${risk.riskLevelKey.toUpperCase()}')),
+        SnackBar(
+          content: Text(copy.savedSleepRisk(risk.riskLevelKey.toUpperCase())),
+        ),
       );
 
       if (risk.riskLevel == RiskLevel.high) {
@@ -58,18 +63,19 @@ class _SleepPageState extends ConsumerState<SleepPage> {
       setState(() => _saving = false);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('儲存失敗：$e')));
+      ).showSnackBar(SnackBar(content: Text(copy.saveFailed(e))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final difficultyLabels = ['沒有困難', '輕微', '中度', '嚴重'];
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
+    final difficultyLabels = copy.sleepDifficultyLabels;
 
     return Scaffold(
       backgroundColor: PsyGuardTheme.background,
       appBar: AppBar(
-        title: const Text('睡眠紀錄'),
+        title: Text(copy.sleepTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.go('/home'),
@@ -108,8 +114,8 @@ class _SleepPageState extends ConsumerState<SleepPage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
-                      '睡眠時長',
+                    Text(
+                      copy.sleepDuration,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -127,7 +133,7 @@ class _SleepPageState extends ConsumerState<SleepPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '${_sleepHours.toStringAsFixed(1)} 小時',
+                        copy.hours(_sleepHours),
                         style: const TextStyle(
                           color: Color(0xFFA18CD1),
                           fontSize: 13,
@@ -188,8 +194,8 @@ class _SleepPageState extends ConsumerState<SleepPage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
-                      '入睡困難度',
+                    Text(
+                      copy.sleepDifficulty,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -230,7 +236,7 @@ class _SleepPageState extends ConsumerState<SleepPage> {
             child: Column(
               children: [
                 _timeTile(
-                  label: '就寢時間',
+                  label: copy.bedtime,
                   time: _bedtime,
                   icon: Icons.bedtime_rounded,
                   color: const Color(0xFF667EEA),
@@ -244,7 +250,7 @@ class _SleepPageState extends ConsumerState<SleepPage> {
                 ),
                 Divider(color: Colors.grey.withValues(alpha: 0.1), height: 24),
                 _timeTile(
-                  label: '起床時間',
+                  label: copy.waketime,
                   time: _waketime,
                   icon: Icons.wb_sunny_rounded,
                   color: PsyGuardTheme.accent,
@@ -276,7 +282,7 @@ class _SleepPageState extends ConsumerState<SleepPage> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('儲存睡眠紀錄'),
+                  : Text(copy.saveSleep),
             ),
           ),
         ],

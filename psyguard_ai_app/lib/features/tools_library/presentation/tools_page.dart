@@ -7,8 +7,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/risk_engine/risk_models.dart';
 import '../../../core/risk_engine/risk_provider.dart';
+import '../../../core/security/local_settings_service.dart';
 import '../../../core/storage/database_provider.dart';
 import '../../../core/data/quotes_data.dart';
+import '../../../l10n/app_strings.dart';
 
 class ToolItem {
   const ToolItem({
@@ -66,10 +68,11 @@ class ToolsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
     return Scaffold(
       backgroundColor: PsyGuardTheme.background,
       appBar: AppBar(
-        title: const Text('心理工具箱'),
+        title: Text(copy.toolsTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.go('/home'),
@@ -77,7 +80,7 @@ class ToolsPage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.history_rounded),
-            tooltip: '練習紀錄',
+            tooltip: copy.toolHistory,
             onPressed: () => context.push('/tools/history'),
           ),
           const SizedBox(width: 8),
@@ -103,16 +106,21 @@ class _ToolCard extends ConsumerWidget {
   final ToolItem tool;
 
   void _handleToolAction(BuildContext context, WidgetRef ref) {
+    final copy = AppStrings.of(ref.read(appLanguageControllerProvider));
     if (tool.id == 'self_dialogue') {
-      _showCardDialog(context);
+      _showCardDialog(context, copy);
     } else if (tool.id == 'emotion_dict') {
-      _showEmotionDialog(context);
+      _showEmotionDialog(context, copy);
     }
   }
 
-  void _showCardDialog(BuildContext context) {
-    final quote =
-        kSelfCompassionQuotes[Random().nextInt(kSelfCompassionQuotes.length)];
+  void _showCardDialog(BuildContext context, AppStrings copy) {
+    final quote = copy.isZhTw
+        ? kSelfCompassionQuotes[Random().nextInt(kSelfCompassionQuotes.length)]
+              .content
+        : _englishSelfCompassionQuotes[Random().nextInt(
+            _englishSelfCompassionQuotes.length,
+          )];
 
     showDialog(
       context: context,
@@ -128,7 +136,7 @@ class _ToolCard extends ConsumerWidget {
               Icon(Icons.auto_awesome, color: tool.color, size: 48),
               const SizedBox(height: 20),
               Text(
-                '今日指引',
+                copy.todayGuidance,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -137,7 +145,7 @@ class _ToolCard extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                '「${quote.content}」',
+                copy.isZhTw ? '「$quote」' : '"$quote"',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 20,
@@ -155,7 +163,7 @@ class _ToolCard extends ConsumerWidget {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('收下這句話'),
+                  child: Text(copy.acceptThisLine),
                 ),
               ),
             ],
@@ -165,26 +173,41 @@ class _ToolCard extends ConsumerWidget {
     );
   }
 
-  void _showEmotionDialog(BuildContext context) {
-    const emotions = [
-      '焦慮 (Anxious)',
-      '疲憊 (Exhausted)',
-      '平靜 (Calm)',
-      '憤怒 (Angry)',
-      '孤獨 (Lonely)',
-      '充滿希望 (Hopeful)',
-      '悲傷 (Sad)',
-      '感恩 (Grateful)',
-      '不知所措 (Overwhelmed)',
-      '興奮 (Excited)',
-      '無力 (Powerless)',
-      '滿足 (Content)',
-    ];
+  void _showEmotionDialog(BuildContext context, AppStrings copy) {
+    final emotions = copy.isZhTw
+        ? const [
+            '焦慮',
+            '疲憊',
+            '平靜',
+            '憤怒',
+            '孤獨',
+            '充滿希望',
+            '悲傷',
+            '感恩',
+            '不知所措',
+            '興奮',
+            '無力',
+            '滿足',
+          ]
+        : const [
+            'Anxious',
+            'Exhausted',
+            'Calm',
+            'Angry',
+            'Lonely',
+            'Hopeful',
+            'Sad',
+            'Grateful',
+            'Overwhelmed',
+            'Excited',
+            'Powerless',
+            'Content',
+          ];
 
     showDialog(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('情緒詞彙庫'),
+        title: Text(copy.emotionDictionary),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         children: emotions
@@ -216,23 +239,35 @@ class _ToolCard extends ConsumerWidget {
           .read(riskEvaluationServiceProvider)
           .evaluateAndPersistToday();
 
+      final copy = AppStrings.of(ref.read(appLanguageControllerProvider));
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已記錄練習！風險：${risk.riskLevelKey.toUpperCase()}')),
+        SnackBar(
+          content: Text(copy.toolSavedRisk(risk.riskLevelKey.toUpperCase())),
+        ),
       );
       if (risk.riskLevel == RiskLevel.high) {
         context.go('/safety');
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('記錄失敗：$e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.of(
+              ref.read(appLanguageControllerProvider),
+            ).toolRecordFailed(e),
+          ),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final copy = AppStrings.of(ref.watch(appLanguageControllerProvider));
+    final toolName = _toolName(tool.id, copy);
+    final toolDescription = _toolDescription(tool.id, copy);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: PsyGuardTheme.softCard,
@@ -252,7 +287,7 @@ class _ToolCard extends ConsumerWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  tool.name,
+                  toolName,
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
@@ -264,7 +299,7 @@ class _ToolCard extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            tool.description,
+            toolDescription,
             style: const TextStyle(
               fontSize: 14,
               color: PsyGuardTheme.textSecondary,
@@ -280,18 +315,49 @@ class _ToolCard extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     onPressed: () => _handleToolAction(context, ref),
-                    child: const Text('開始體驗'),
+                    child: Text(copy.startExperience),
                   )
                 : OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     onPressed: () => _logCompletion(context, ref),
-                    child: const Text('完成今日練習'),
+                    child: Text(copy.completePractice),
                   ),
           ),
         ],
       ),
     );
   }
+
+  String _toolName(String id, AppStrings copy) {
+    return switch (id) {
+      'self_dialogue' => copy.selfDialogueCard,
+      'breathing_478' => copy.breathing478,
+      'grounding_54321' => copy.grounding54321,
+      'emotion_dict' => copy.emotionDictionary,
+      _ => id,
+    };
+  }
+
+  String _toolDescription(String id, AppStrings copy) {
+    return switch (id) {
+      'self_dialogue' => copy.selfDialogueDesc,
+      'breathing_478' => copy.breathing478Desc,
+      'grounding_54321' => copy.grounding54321Desc,
+      'emotion_dict' => copy.emotionDictionaryDesc,
+      _ => '',
+    };
+  }
 }
+
+const _englishSelfCompassionQuotes = [
+  'Even if today feels hard, I do not need to punish myself to feel better.',
+  'This feeling is temporary. It can pass through me like a cloud.',
+  'I have the right to rest, say no, and care for my needs.',
+  'It is okay not to do this perfectly. I am learning.',
+  'I only need to focus on the next small step.',
+  'My worth is not measured by productivity or other people\'s opinions.',
+  'Take a breath. I am here. I am safe in this moment.',
+  'I can speak to myself with the same kindness I would offer a good friend.',
+];
